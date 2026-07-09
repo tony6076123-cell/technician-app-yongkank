@@ -1,0 +1,8 @@
+node_modules/
+*.log
+firebase-key.json
+gmail-token.json
+.env
+_test*.json
+cloudflared.exe
+gmail-credentials.json

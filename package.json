@@ -1,0 +1,12 @@
+{
+  "name": "technician-performance-app",
+  "version": "1.0.0",
+  "description": "技師/接待專員業績查詢 App（獨立部署版）",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "googleapis": "^144.0.0"
+  }
+}

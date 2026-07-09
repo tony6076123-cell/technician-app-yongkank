@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>每日報表寄送手冊</title>
+<style>
+  body { font-family: "Microsoft JhengHei", "PingFang TC", sans-serif; max-width: 720px; margin: 40px auto; padding: 0 24px; line-height: 1.8; color: #1a1a1a; }
+  h1 { font-size: 22px; border-bottom: 3px solid #16233d; padding-bottom: 10px; color: #16233d; }
+  h2 { font-size: 17px; margin-top: 28px; color: #16233d; border-left: 4px solid #d98a2b; padding-left: 10px; }
+  p { font-size: 14px; }
+  ol, ul { font-size: 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; }
+  code { background: #f3f0e8; padding: 2px 6px; border-radius: 4px; font-family: "Consolas", monospace; }
+  pre { background: #16233d; color: #f3f0e8; padding: 12px 16px; border-radius: 8px; overflow-x: auto; font-family: "Consolas", monospace; font-size: 13px; }
+  a { color: #b96f18; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 13px; }
+  th, td { border: 1px solid #d8d2c2; padding: 8px 10px; text-align: left; }
+  th { background: #16233d; color: #f3f0e8; }
+  tr:nth-child(even) { background: #f9f7f2; }
+  .tip { background: #eef5ff; border: 1px solid #85b7eb; border-radius: 8px; padding: 12px 16px; margin: 16px 0; font-size: 13px; }
+  hr { border: none; border-top: 1px solid #d8d2c2; margin: 24px 0; }
+</style>
+</head>
+<body>
+
+<h1>每日報表寄送手冊</h1>
+<p>App 會自動讀取你自己的Gmail信箱抓報表資料，<strong>每天要寄一次，共8份Excel檔</strong>。</p>
+<hr>
+
+<h2>每天要匯出的8份報表</h2>
+
+<p><strong>今天的資料（4份，選「單日」，就是只匯今天這一天，不要選整月累計）：</strong></p>
+<table>
+<tr><th>#</th><th>報表</th><th>身分</th></tr>
+<tr><td>1</td><td>205 業績統計表（彙總版）</td><td>承修技師版</td></tr>
+<tr><td>2</td><td>205 業績統計表（彙總版）</td><td>服務專員(接待)版</td></tr>
+<tr><td>3</td><td>1G0 銷售獎金一覽表</td><td>承修技師版</td></tr>
+<tr><td>4</td><td>1G0 銷售獎金一覽表</td><td>服務專員(接待)版</td></tr>
+</table>
+
+<p><strong>去年同一天的資料（4份，用來對比「去年同期」數字）：</strong></p>
+<table>
+<tr><th>#</th><th>報表</th><th>身分</th></tr>
+<tr><td>5</td><td>205 業績統計表（去年同一天）</td><td>承修技師版</td></tr>
+<tr><td>6</td><td>205 業績統計表（去年同一天）</td><td>服務專員(接待)版</td></tr>
+<tr><td>7</td><td>1G0 銷售獎金一覽表（去年同一天）</td><td>承修技師版</td></tr>
+<tr><td>8</td><td>1G0 銷售獎金一覽表（去年同一天）</td><td>服務專員(接待)版</td></tr>
+</table>
+
+<div class="tip">
+<strong>匯出設定重點：</strong><br>
+・205報表一律選「彙總版」（系統已經幫你把每人業績加總好的那種），不要選明細版<br>
+・期間都選「單日」（只選一天），不要選整月範圍
+</div>
+<hr>
+
+<h2>怎麼寄</h2>
+<ol>
+  <li>從服務廠系統把上面8份報表都匯出成Excel檔</li>
+  <li>寄一封信<strong>給你自己</strong>（收件人填你剛剛在App授權登入的那個Gmail），把8份Excel全部附加上去</li>
+  <li>主旨隨便打，只要有「報表」「業績」「1G0」「銷售獎金」「零件」其中一個字就可以，例如：
+    <pre>永康廠 每日報表 2026-07-09</pre>
+  </li>
+  <li>送出，結束</li>
+</ol>
+<hr>
+
+<h2>之後呢？</h2>
+<ul>
+  <li>App <strong>每2小時自動掃一次信箱</strong>，全自動處理，寄出後不用管</li>
+  <li>最慢2小時內資料會更新進 App</li>
+  <li>想確認有沒有更新，打開 App 網址，看數字有沒有變</li>
+</ul>
+<hr>
+
+<h2>卡住了怎麼辦</h2>
+<p>打開 <a href="https://claude.ai">claude.ai</a>，登入你的Google帳號，直接打字描述狀況，例如：</p>
+<p style="background:#f3f0e8; padding:10px 14px; border-radius:8px;">「我今天早上寄了8份報表，但App裡的業績資料還是舊的，超過4小時了」</p>
+<p>把狀況講清楚（哪一廠、寄了什麼、什麼時候寄的、App現在顯示什麼），Claude會幫忙排查。</p>
+
+</body>
+</html>
