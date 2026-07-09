@@ -12,22 +12,34 @@ const SCOPES = ['https://www.googleapis.com/auth/gmail.readonly'];
 const REDIRECT_PORT = 3456;
 
 async function authenticate(interactive = false) {
-  if (!fs.existsSync(CREDS_PATH)) {
-    throw new Error('找不到 gmail-credentials.json，請先到 Google Cloud Console 下載');
-  }
-  const creds = JSON.parse(fs.readFileSync(CREDS_PATH, 'utf8'));
+  // 🦞 gmail-credentials.json 含 OAuth client_id/secret，不能推上公開repo（GitHub push protection會擋）。
+  // 本機版：檔案放同資料夾即可。雲端版：改用環境變數 GMAIL_CREDENTIALS_JSON（整份json內容）。
+  let credsRaw;
+  if (fs.existsSync(CREDS_PATH)) credsRaw = fs.readFileSync(CREDS_PATH, 'utf8');
+  else if (process.env.GMAIL_CREDENTIALS_JSON) credsRaw = process.env.GMAIL_CREDENTIALS_JSON;
+  else throw new Error('找不到 gmail-credentials.json，請先到 Google Cloud Console 下載');
+  const creds = JSON.parse(credsRaw);
   const c = creds.installed || creds.web;
   const oAuth2Client = new google.auth.OAuth2(
     c.client_id, c.client_secret, `http://localhost:${REDIRECT_PORT}/oauth-callback`
   );
 
-  if (fs.existsSync(TOKEN_PATH)) {
-    const token = JSON.parse(fs.readFileSync(TOKEN_PATH, 'utf8'));
-    oAuth2Client.setCredentials(token);
+  // 🦞 token 同樣支援環境變數 GMAIL_TOKEN_JSON（雲端主機沒有瀏覽器可以做互動授權，
+  //    要先在有瀏覽器的電腦上授權一次，再把 gmail-token.json 的內容貼進環境變數）。
+  let tokenRaw = null;
+  if (fs.existsSync(TOKEN_PATH)) tokenRaw = fs.readFileSync(TOKEN_PATH, 'utf8');
+  else if (process.env.GMAIL_TOKEN_JSON) tokenRaw = process.env.GMAIL_TOKEN_JSON;
+  if (tokenRaw) {
+    oAuth2Client.setCredentials(JSON.parse(tokenRaw));
     return oAuth2Client;
   }
 
   if (!interactive) throw new Error('尚未授權，請先執行 設定Gmail.bat');
+
+  // 雲端主機（Render等）沒有瀏覽器，互動授權只能在本機做
+  if (process.env.RENDER || !process.stdout.isTTY) {
+    throw new Error('尚未授權：雲端環境請設定 GMAIL_TOKEN_JSON 環境變數（先在本機授權一次取得 gmail-token.json）');
+  }
 
   const authUrl = oAuth2Client.generateAuthUrl({
     access_type: 'offline',
