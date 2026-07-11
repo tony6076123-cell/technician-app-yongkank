@@ -103,6 +103,14 @@
   .dayrow.total{ border-top:1px solid var(--line); margin-top:5px; padding-top:7px; font-weight:900; }
   .dayrow.total .dt{ color:var(--ink); font-weight:900; }
   .noneset{ font-size:13px; color:var(--ink-soft); padding: 8px 0 4px; }
+  .set-target-btn{
+    border:none; background: var(--navy); color:#fff; border-radius:8px;
+    padding:6px 14px; font-size:13px; cursor:pointer; font-family:inherit;
+  }
+  .edit-target{
+    border:none; background:none; color:var(--ink-soft); font-size:11px;
+    cursor:pointer; padding:2px 4px; text-decoration:underline; font-family:inherit;
+  }
 
   /* 排行列 */
   .rankrow{ display:flex; align-items:center; gap:10px; padding: 8px 0; border-top: 1px dashed #eae5d8; }
@@ -309,7 +317,7 @@ function render(){
 
   el('kpiRow').innerHTML = `
     <div class="kpi hero"><div class="label">${curLoc}廠 本月累計業績</div><div class="value">$${fmt(st.total)}</div></div>
-    <div class="kpi"><div class="label">月目標達成</div><div class="value">${st.pct!==null? st.pct+'<small>%</small>' : '－<small>未設定</small>'}</div></div>
+    <div class="kpi"><div class="label">月目標達成 <button class="edit-target" onclick="setTarget('${curLoc}')">${st.targetAmt?'修改':'設定'}目標</button></div><div class="value">${st.pct!==null? st.pct+'<small>%</small>' : '－<small>未設定</small>'}</div></div>
     <div class="kpi"><div class="label">工單數</div><div class="value">${fmt(st.orders)}<small>張</small></div></div>
     <div class="kpi"><div class="label">資料截至</div><div class="value" style="font-size:17px">${st.lastDay || '—'}</div></div>
   `;
@@ -318,7 +326,7 @@ function render(){
   const days = plantDaily(curLoc);
   let rateHTML = `<h2>📈 每日達成率 <span class="count">當日業績／累計達成率</span></h2>`;
   if (!st.targetAmt){
-    rateHTML += `<div class="noneset">尚未設定 ${curLoc}廠 ${curMonth()} 月目標，無法計算達成率（管理層可在查詢 App 設定）</div>`;
+    rateHTML += `<div class="noneset">尚未設定本月目標，無法計算達成率　<button class="set-target-btn" onclick="setTarget('${curLoc}')">＋ 設定月目標</button></div>`;
     if (days.length){
       const maxD = Math.max(...days.map(d=>d.amt),1);
       rateHTML += days.map(d=>`<div class="dayrow">
@@ -349,6 +357,32 @@ function render(){
   const adv  = st.sums.filter(s=>s.role==='接待').sort((a,b)=>b.untaxed_amt-a.untaxed_amt);
   renderBoard('boardTech', '🔧 承修技師排行', tech);
   renderBoard('boardAdv', '🤝 接待專員排行', adv);
+}
+
+// 🦞 設定/修改月目標：寫進 monthly_targets（同查詢App的 /api/set-target，僅管理層可寫）
+async function setTarget(loc){
+  const cur = (DATA.targets||[]).find(t => t._id === `${loc}_${curMonth()}`);
+  const input = prompt(`請輸入 ${loc}廠 ${curMonth()} 的月目標金額（元）：`, cur ? cur.target_amt : '');
+  if (input === null) return;
+  const amt = Number(String(input).replace(/[,\s元$]/g, ''));
+  if (!amt || amt <= 0){ alert('請輸入正確的金額數字'); return; }
+  try{
+    const res = await fetch('/api/set-target', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ code:'mgr_gm', location:loc, month:curMonth(), target_amt:amt })
+    });
+    const r = await res.json();
+    if (!r.ok) throw new Error(r.error||'寫入失敗');
+    // 更新本地資料立即重繪，不用整頁重載
+    const id = `${loc}_${curMonth()}`;
+    const t = (DATA.targets||[]).find(t => t._id === id);
+    if (t) t.target_amt = amt;
+    else { DATA.targets = DATA.targets||[]; DATA.targets.push({ _id:id, location:loc, target_amt:amt }); }
+    if (curLoc) render(); else goHome();
+    alert(`✅ ${loc}廠 ${curMonth()} 月目標已設為 $${amt.toLocaleString('zh-TW')}`);
+  }catch(e){
+    alert('❌ 設定失敗：' + e.message);
+  }
 }
 
 function toggleDetail(key, cat){
