@@ -9,17 +9,14 @@
 <style>
   :root{
     --navy: #16233d;
-    --navy-2: #1f3054;
     --paper: #f3f0e8;
     --paper-2: #ffffff;
     --ink: #16233d;
     --ink-soft: #5c6a86;
     --line: #d8d2c2;
-    --amber: #d98a2b;
-    --amber-deep: #b96f18;
-    --red: #b5432f;
-    --green: #3a7d5c;
-    --blue: #3d6a9e;
+    --labor: #2e5da8;   /* 藍色＝工資 */
+    --parts: #e2a72e;   /* 黃色＝零件 */
+    --out:   #56b4d3;   /* 水藍＝外修 */
     --radius: 14px;
   }
   *{box-sizing:border-box;}
@@ -44,7 +41,6 @@
 
   .wrap{ max-width: 1080px; margin: 0 auto; padding: 20px 18px 60px; }
 
-  /* 廠區切換 */
   .loc-tabs{ display:flex; gap:10px; margin: 4px 0 18px; }
   .loc-tab{
     flex:1; text-align:center; padding: 13px 10px; border-radius: 12px;
@@ -54,13 +50,9 @@
   .loc-tab.active{ background: var(--navy); color:#fff; border-color: var(--navy); }
   .loc-tab small{ display:block; font-weight:400; font-size:11px; opacity:.65; margin-top:2px; }
 
-  /* KPI 卡 */
   .kpi-row{ display:grid; grid-template-columns: repeat(4, 1fr); gap:12px; margin-bottom: 22px; }
   @media (max-width: 720px){ .kpi-row{ grid-template-columns: repeat(2, 1fr); } }
-  .kpi{
-    background: var(--paper-2); border:1px solid var(--line); border-radius: var(--radius);
-    padding: 14px 16px;
-  }
+  .kpi{ background: var(--paper-2); border:1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
   .kpi .label{ font-size:12px; color:var(--ink-soft); }
   .kpi .value{ font-size:24px; font-weight:900; margin-top:4px; font-family:'Roboto Mono',monospace; }
   .kpi .value small{ font-size:12px; font-weight:400; color:var(--ink-soft); margin-left:2px; }
@@ -68,34 +60,72 @@
   .kpi.hero .label{ color:rgba(255,255,255,.65); }
   .kpi.hero .value{ color: #f5c069; }
 
-  /* 排行榜區 */
   .board{
     background: var(--paper-2); border:1px solid var(--line); border-radius: var(--radius);
     padding: 18px 18px 10px; margin-bottom: 22px;
   }
   .board h2{ margin:0 0 2px; font-size:17px; font-weight:900; display:flex; align-items:baseline; gap:8px; }
   .board h2 .count{ font-size:12px; font-weight:400; color:var(--ink-soft); }
-  .board .legend{ display:flex; gap:14px; font-size:11px; color:var(--ink-soft); margin: 8px 0 14px; flex-wrap:wrap; }
-  .legend i{ display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:4px; vertical-align:-1px; }
-  .lg-labor i{ background: var(--navy-2); }
-  .lg-parts i{ background: var(--amber); }
-  .lg-out i{ background: var(--blue); }
+  .board .legend{ display:flex; gap:14px; font-size:12px; color:var(--ink-soft); margin: 8px 0 4px; flex-wrap:wrap; }
+  .legend i{ display:inline-block; width:11px; height:11px; border-radius:3px; margin-right:4px; vertical-align:-1px; }
+  .lg-labor i{ background: var(--labor); }
+  .lg-parts i{ background: var(--parts); }
+  .lg-out i{ background: var(--out); }
+  .hint{ font-size:11.5px; color:var(--ink-soft); margin: 0 0 12px; }
 
-  .rankrow{ display:flex; align-items:center; gap:10px; padding: 7px 0; border-top: 1px dashed #eae5d8; }
-  .rankrow:first-of-type{ border-top:none; }
+  .rankrow{ display:flex; align-items:center; gap:10px; padding: 8px 0; border-top: 1px dashed #eae5d8; }
   .rk{ width: 34px; text-align:center; font-family:'Roboto Mono',monospace; font-weight:700; font-size:15px; color:var(--ink-soft); flex-shrink:0; }
   .rk.m1{ font-size:20px; } .rk.m2{ font-size:18px; } .rk.m3{ font-size:17px; }
   .who{ width: 96px; flex-shrink:0; }
   .who .nm{ font-weight:700; font-size:14.5px; line-height:1.2; }
   .who .dp{ font-size:10.5px; color:var(--ink-soft); }
   .barzone{ flex:1; min-width:0; }
-  .bar{ display:flex; height: 22px; border-radius: 6px; overflow:hidden; background:#f0ece1; }
-  .seg{ height:100%; }
-  .seg.labor{ background: var(--navy-2); }
-  .seg.parts{ background: var(--amber); }
-  .seg.out{ background: var(--blue); }
+  .bar{ display:flex; height: 26px; border-radius: 7px; overflow:hidden; background:#f0ece1; }
+  .seg{ height:100%; cursor:pointer; transition: filter .15s; position:relative; }
+  .seg:hover{ filter: brightness(1.15); }
+  .seg.labor{ background: var(--labor); }
+  .seg.parts{ background: var(--parts); }
+  .seg.out{ background: var(--out); }
   .amt{ width: 108px; text-align:right; font-family:'Roboto Mono',monospace; font-weight:700; font-size:14.5px; flex-shrink:0; }
   .amt small{ display:block; font-weight:400; font-size:10.5px; color:var(--ink-soft); }
+
+  /* 點開的明細面板 */
+  .detail{
+    margin: 2px 0 10px 44px; border:1.5px solid var(--line); border-radius: 12px;
+    background: #fbfaf6; padding: 14px 16px; animation: pop .18s ease;
+  }
+  @keyframes pop{ from{ opacity:0; transform: translateY(-4px);} to{opacity:1; transform:none;} }
+  .detail .dhead{ display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px; }
+  .detail .dhead .t{ font-weight:900; font-size:15px; }
+  .detail .close{ border:none; background:#ece7da; border-radius:8px; padding:4px 12px; font-size:12px; cursor:pointer; color:var(--ink-soft); }
+  .chips{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+  .chip{
+    border:1.5px solid var(--line); border-radius: 999px; padding: 6px 14px;
+    font-size:13px; cursor:pointer; background:#fff; user-select:none;
+    display:flex; align-items:center; gap:6px;
+  }
+  .chip i{ width:10px; height:10px; border-radius:3px; display:inline-block; }
+  .chip.labor i{ background:var(--labor);} .chip.parts i{ background:var(--parts);} .chip.out i{ background:var(--out);}
+  .chip b{ font-family:'Roboto Mono',monospace; }
+  .chip.on.labor{ background:var(--labor); color:#fff; border-color:var(--labor); }
+  .chip.on.parts{ background:var(--parts); color:#fff; border-color:var(--parts); }
+  .chip.on.out{ background:var(--out); color:#fff; border-color:var(--out); }
+  .chip.on i{ background:#fff; }
+
+  .dsec-title{ font-size:12px; color:var(--ink-soft); margin: 12px 0 6px; font-weight:700; }
+  .dayrow{ display:flex; align-items:center; gap:10px; padding:3px 0; font-size:13px; }
+  .dayrow .dt{ width:88px; font-family:'Roboto Mono',monospace; color:var(--ink-soft); flex-shrink:0; }
+  .dayrow .dbar{ flex:1; height:14px; border-radius:4px; background:#efe9db; overflow:hidden; }
+  .dayrow .dbar i{ display:block; height:100%; border-radius:4px; }
+  .dayrow .dv{ width:92px; text-align:right; font-family:'Roboto Mono',monospace; font-weight:700; flex-shrink:0; }
+  .dayrow.total{ border-top:1px solid var(--line); margin-top:5px; padding-top:7px; font-weight:900; }
+  .dayrow.total .dt{ color:var(--ink); font-weight:900; }
+
+  table.items{ width:100%; border-collapse:collapse; font-size:12.5px; margin-top:4px; }
+  table.items th{ text-align:left; color:var(--ink-soft); font-weight:500; font-size:11px; padding:4px 6px; border-bottom:1px solid var(--line); }
+  table.items td{ padding:5px 6px; border-bottom:1px dashed #eae5d8; }
+  table.items td.r, table.items th.r{ text-align:right; font-family:'Roboto Mono',monospace; }
+  .items-note{ font-size:11px; color:var(--ink-soft); margin-top:8px; }
 
   .empty{ color:var(--ink-soft); font-size:14px; padding: 18px 4px 22px; }
   .foot{ text-align:center; color:var(--ink-soft); font-size:11.5px; margin-top:8px; }
@@ -124,8 +154,13 @@
 <script>
 const el = id => document.getElementById(id);
 const fmt = n => Math.round(n||0).toLocaleString('zh-TW');
+const CATS = { labor:{name:'工資', color:'var(--labor)', field:'labor_amt'},
+               parts:{name:'零件', color:'var(--parts)', field:'parts_amt'},
+               out:{name:'外修', color:'var(--out)', field:'outsourced_amt'} };
 let DATA = null;
 let curLoc = '永康';
+let openKey = null;   // 目前展開的人 (location|role|employee)
+let openCat = null;   // 目前展開的類別 labor/parts/out
 
 // 🦞 與 技師業績.html 的 sumMonthToDate 同一套口徑：本月 = 加總當月每日快照
 function monthlySums(perf){
@@ -134,7 +169,7 @@ function monthlySums(perf){
   (perf||[]).forEach(r => {
     if (!r.period_end || !r.period_end.startsWith(curMonth)) return;
     const key = r.location + '|' + r.role + '|' + r.employee;
-    if (!map.has(key)) map.set(key, { employee:r.employee, role:r.role, location:r.location, dept:r.dept,
+    if (!map.has(key)) map.set(key, { key, employee:r.employee, role:r.role, location:r.location, dept:r.dept,
       order_count:0, hours:0, labor_amt:0, parts_amt:0, outsourced_amt:0, untaxed_amt:0, lastDay:'' });
     const s = map.get(key);
     s.order_count += r.order_count||0; s.hours += r.hours||0;
@@ -145,7 +180,93 @@ function monthlySums(perf){
   return [...map.values()];
 }
 
+// 某人當月每日快照（日累計列表用）
+function dailyRows(employee, role, location){
+  const curMonth = new Date().toISOString().slice(0,7);
+  return (DATA.performance||[]).filter(p => p.employee===employee && p.role===role && p.location===location
+      && p.period_end && p.period_end.startsWith(curMonth))
+    .sort((a,b)=>a.period_end.localeCompare(b.period_end));
+}
+
+// 零件品項明細：當月加總（來自1G0報表 technician_parts_summary）
+function partsItems(employee, location){
+  const curMonth = new Date().toISOString().slice(0,7);
+  const rows = (DATA.parts||[]).filter(p => p.employee===employee && p.location===location
+      && p.period_end && p.period_end.startsWith(curMonth));
+  const itemMap = new Map();
+  rows.forEach(r => {
+    let items = [];
+    try{ items = r.items_json ? JSON.parse(r.items_json) : []; }catch(e){}
+    items.forEach(it => {
+      const key = it.partNo+'|'+it.desc;
+      if (!itemMap.has(key)) itemMap.set(key, { partNo:it.partNo, desc:it.desc, qty:0, amt:0 });
+      const e2 = itemMap.get(key); e2.qty += it.qty||0; e2.amt += it.amt||0;
+    });
+  });
+  return [...itemMap.values()].sort((a,b)=>b.amt-a.amt);
+}
+
 function medal(i){ return i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1); }
+
+function toggleDetail(key, cat){
+  if (openKey === key && openCat === cat){ openKey = null; openCat = null; }
+  else { openKey = key; openCat = cat; }
+  render();
+}
+function switchCat(key, cat){ openKey = key; openCat = cat; render(); }
+function closeDetail(){ openKey = null; openCat = null; render(); }
+
+function detailHTML(s){
+  const cat = CATS[openCat];
+  const days = dailyRows(s.employee, s.role, s.location);
+  const monthTotal = s[cat.field] || 0;
+  const maxDay = Math.max(...days.map(d=>d[cat.field]||0), 1);
+  let cum = 0;
+  const dayList = days.map(d => {
+    const v = d[cat.field]||0; cum += v;
+    return `<div class="dayrow">
+      <div class="dt">${(d.period_end||'').slice(5)}</div>
+      <div class="dbar"><i style="width:${Math.max(1,v/maxDay*100)}%; background:${cat.color}"></i></div>
+      <div class="dv">$${fmt(v)}</div>
+    </div>`;
+  }).join('');
+
+  let itemsHTML = '';
+  if (openCat === 'parts' && s.role === '技師'){
+    const items = partsItems(s.employee, s.location);
+    if (items.length){
+      itemsHTML = `<div class="dsec-title">🧾 零件品項明細（本月，來自1G0報表）</div>
+      <table class="items">
+        <tr><th>品名</th><th>料號</th><th class="r">數量</th><th class="r">金額</th></tr>
+        ${items.slice(0,15).map(it=>`<tr><td>${it.desc||''}</td><td class="mono" style="font-size:11px">${it.partNo||''}</td><td class="r">${it.qty}</td><td class="r">$${fmt(it.amt)}</td></tr>`).join('')}
+      </table>
+      ${items.length>15?`<div class="items-note">僅列前 15 項（共 ${items.length} 項）</div>`:''}
+      <div class="items-note">品項加總可能與上方零件金額有小落差（205 與 1G0 兩份報表統計口徑差異）</div>`;
+    } else {
+      itemsHTML = `<div class="items-note">本月尚無零件品項明細資料</div>`;
+    }
+  }
+
+  return `<div class="detail">
+    <div class="dhead">
+      <div class="t">${s.employee}｜${cat.name}明細</div>
+      <button class="close" onclick="closeDetail()">收合 ✕</button>
+    </div>
+    <div class="chips">
+      ${Object.keys(CATS).map(c=>`
+        <div class="chip ${c} ${c===openCat?'on':''}" onclick="switchCat('${s.key}','${c}')">
+          <i></i>${CATS[c].name} <b>$${fmt(s[CATS[c].field])}</b>
+        </div>`).join('')}
+    </div>
+    <div class="dsec-title">📅 ${cat.name}日累計（每天寄一次報表＝一筆）</div>
+    ${dayList || '<div class="items-note">本月尚無每日資料</div>'}
+    <div class="dayrow total">
+      <div class="dt">月累計</div><div class="dbar" style="background:none"></div>
+      <div class="dv">$${fmt(monthTotal)}</div>
+    </div>
+    ${itemsHTML}
+  </div>`;
+}
 
 function renderBoard(elId, title, rows){
   const box = el(elId);
@@ -161,20 +282,23 @@ function renderBoard(elId, title, rows){
       <span class="lg-parts"><i></i>零件</span>
       <span class="lg-out"><i></i>外修</span>
     </div>
+    <div class="hint">👆 點長條圖上的顏色區塊，展開該項目的金額與每日明細</div>
     ${rows.map((r,i)=>{
       const w = Math.max(2, r.untaxed_amt/max*100);
       const base = (r.labor_amt + r.parts_amt + r.outsourced_amt) || 1;
       const wl = r.labor_amt/base*w, wp = r.parts_amt/base*w, wo = r.outsourced_amt/base*w;
+      const opened = openKey === r.key;
       return `<div class="rankrow">
         <div class="rk ${i<3?'m'+(i+1):''}">${medal(i)}</div>
         <div class="who"><div class="nm">${r.employee}</div><div class="dp">${r.dept||''}</div></div>
         <div class="barzone"><div class="bar">
-          <div class="seg labor" style="width:${wl}%"></div>
-          <div class="seg parts" style="width:${wp}%"></div>
-          <div class="seg out" style="width:${wo}%"></div>
+          <div class="seg labor" style="width:${wl}%" title="工資 $${fmt(r.labor_amt)}" onclick="toggleDetail('${r.key}','labor')"></div>
+          <div class="seg parts" style="width:${wp}%" title="零件 $${fmt(r.parts_amt)}" onclick="toggleDetail('${r.key}','parts')"></div>
+          <div class="seg out" style="width:${wo}%" title="外修 $${fmt(r.outsourced_amt)}" onclick="toggleDetail('${r.key}','out')"></div>
         </div></div>
         <div class="amt">$${fmt(r.untaxed_amt)}<small>${r.order_count} 張工單</small></div>
-      </div>`;
+      </div>
+      ${opened ? detailHTML(r) : ''}`;
     }).join('')}
   `;
 }
@@ -210,7 +334,7 @@ function renderTabs(){
     return `<div class="loc-tab ${loc===curLoc?'active':''}" onclick="switchLoc('${loc}')">${loc}廠<small>${n} 人有本月資料</small></div>`;
   }).join('');
 }
-function switchLoc(loc){ curLoc = loc; renderTabs(); render(); }
+function switchLoc(loc){ curLoc = loc; openKey=null; openCat=null; renderTabs(); render(); }
 
 async function init(){
   try{
@@ -221,7 +345,6 @@ async function init(){
     el('subTitle').textContent = `${m.getFullYear()} 年 ${m.getMonth()+1} 月｜技師＋接待專員全員排名`;
     el('loading').style.display = 'none';
     el('content').style.display = '';
-    // 預設顯示有資料的廠
     const sums = monthlySums(DATA.performance);
     if (!sums.some(s=>s.location==='永康') && sums.some(s=>s.location==='歸仁')) curLoc = '歸仁';
     renderTabs(); render();
