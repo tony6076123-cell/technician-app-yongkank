@@ -26,6 +26,16 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // 🦞 月度檢討（每人本期 vs 上月同期 vs 去年同期＋不足項目與改善施策）
+  if (u.pathname === '/review') {
+    try {
+      const html = fs.readFileSync(path.join(__dirname, '月度檢討.html'), 'utf8');
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
+    } catch (e) { res.writeHead(404); res.end('找不到頁面'); }
+    return;
+  }
+
   // 🦞 老闆版全員總覽儀表板（全員排行榜一頁看完，不用逐人點選）
   if (u.pathname === '/board') {
     try {
