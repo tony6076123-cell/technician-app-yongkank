@@ -336,20 +336,30 @@ function renderTabs(){
 }
 function switchLoc(loc){ curLoc = loc; openKey=null; openCat=null; renderTabs(); render(); }
 
+// 🦞 免費雲端主機休眠喚醒需要幾十秒，第一次抓資料失敗就自動重試，不要直接顯示失敗
 async function init(){
-  try{
-    const res = await fetch('/api/my-performance?code=mgr_gm');
-    DATA = await res.json();
-    if (!DATA.ok) throw new Error(DATA.error||'讀取失敗');
-    const m = new Date();
-    el('subTitle').textContent = `${m.getFullYear()} 年 ${m.getMonth()+1} 月｜技師＋接待專員全員排名`;
-    el('loading').style.display = 'none';
-    el('content').style.display = '';
-    const sums = monthlySums(DATA.performance);
-    if (!sums.some(s=>s.location==='永康') && sums.some(s=>s.location==='歸仁')) curLoc = '歸仁';
-    renderTabs(); render();
-  }catch(e){
-    el('loading').textContent = '❌ 載入失敗：' + e.message;
+  const MAX_TRY = 5;
+  for (let i = 1; i <= MAX_TRY; i++){
+    try{
+      if (i > 1) el('loading').textContent = `⏳ 伺服器喚醒中，自動重試（第 ${i}/${MAX_TRY} 次）…`;
+      const res = await fetch('/api/my-performance?code=mgr_gm');
+      DATA = await res.json();
+      if (!DATA.ok) throw new Error(DATA.error||'讀取失敗');
+      const m = new Date();
+      el('subTitle').textContent = `${m.getFullYear()} 年 ${m.getMonth()+1} 月｜技師＋接待專員全員排名`;
+      el('loading').style.display = 'none';
+      el('content').style.display = '';
+      const sums = monthlySums(DATA.performance);
+      if (!sums.some(s=>s.location==='永康') && sums.some(s=>s.location==='歸仁')) curLoc = '歸仁';
+      renderTabs(); render();
+      return;
+    }catch(e){
+      if (i === MAX_TRY){
+        el('loading').innerHTML = '❌ 載入失敗：' + e.message + '<br><br><button onclick="location.reload()" style="padding:10px 24px;font-size:15px;border:none;border-radius:10px;background:#16233d;color:#fff;cursor:pointer">🔄 再試一次</button>';
+      } else {
+        await new Promise(r => setTimeout(r, 8000));
+      }
+    }
   }
 }
 init();
