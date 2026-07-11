@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>全員業績總覽</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy: #16233d;
+    --navy-2: #1f3054;
+    --paper: #f3f0e8;
+    --paper-2: #ffffff;
+    --ink: #16233d;
+    --ink-soft: #5c6a86;
+    --line: #d8d2c2;
+    --amber: #d98a2b;
+    --amber-deep: #b96f18;
+    --red: #b5432f;
+    --green: #3a7d5c;
+    --blue: #3d6a9e;
+    --radius: 14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Noto Sans TC', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height:100vh;
+  }
+  .mono{ font-family:'Roboto Mono', monospace; font-variant-numeric: tabular-nums; }
+
+  .topbar{
+    background: var(--navy); color:#f3f0e8;
+    padding: 20px 22px; position: sticky; top:0; z-index:20;
+    box-shadow: 0 4px 14px rgba(22,35,61,0.25);
+  }
+  .topbar .brand{ font-size:12px; letter-spacing:.14em; opacity:.65; text-transform:uppercase; font-family:'Roboto Mono',monospace; }
+  .topbar h1{ margin:4px 0 0; font-size:24px; font-weight:900; letter-spacing:.02em; }
+  .topbar .sub{ margin-top:6px; font-size:13px; opacity:.75; }
+
+  .wrap{ max-width: 1080px; margin: 0 auto; padding: 20px 18px 60px; }
+
+  /* 廠區切換 */
+  .loc-tabs{ display:flex; gap:10px; margin: 4px 0 18px; }
+  .loc-tab{
+    flex:1; text-align:center; padding: 13px 10px; border-radius: 12px;
+    border:1.5px solid var(--line); background: var(--paper-2);
+    font-size:16px; font-weight:700; cursor:pointer; user-select:none;
+  }
+  .loc-tab.active{ background: var(--navy); color:#fff; border-color: var(--navy); }
+  .loc-tab small{ display:block; font-weight:400; font-size:11px; opacity:.65; margin-top:2px; }
+
+  /* KPI 卡 */
+  .kpi-row{ display:grid; grid-template-columns: repeat(4, 1fr); gap:12px; margin-bottom: 22px; }
+  @media (max-width: 720px){ .kpi-row{ grid-template-columns: repeat(2, 1fr); } }
+  .kpi{
+    background: var(--paper-2); border:1px solid var(--line); border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+  .kpi .label{ font-size:12px; color:var(--ink-soft); }
+  .kpi .value{ font-size:24px; font-weight:900; margin-top:4px; font-family:'Roboto Mono',monospace; }
+  .kpi .value small{ font-size:12px; font-weight:400; color:var(--ink-soft); margin-left:2px; }
+  .kpi.hero{ background: var(--navy); border-color: var(--navy); color:#fff; }
+  .kpi.hero .label{ color:rgba(255,255,255,.65); }
+  .kpi.hero .value{ color: #f5c069; }
+
+  /* 排行榜區 */
+  .board{
+    background: var(--paper-2); border:1px solid var(--line); border-radius: var(--radius);
+    padding: 18px 18px 10px; margin-bottom: 22px;
+  }
+  .board h2{ margin:0 0 2px; font-size:17px; font-weight:900; display:flex; align-items:baseline; gap:8px; }
+  .board h2 .count{ font-size:12px; font-weight:400; color:var(--ink-soft); }
+  .board .legend{ display:flex; gap:14px; font-size:11px; color:var(--ink-soft); margin: 8px 0 14px; flex-wrap:wrap; }
+  .legend i{ display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:4px; vertical-align:-1px; }
+  .lg-labor i{ background: var(--navy-2); }
+  .lg-parts i{ background: var(--amber); }
+  .lg-out i{ background: var(--blue); }
+
+  .rankrow{ display:flex; align-items:center; gap:10px; padding: 7px 0; border-top: 1px dashed #eae5d8; }
+  .rankrow:first-of-type{ border-top:none; }
+  .rk{ width: 34px; text-align:center; font-family:'Roboto Mono',monospace; font-weight:700; font-size:15px; color:var(--ink-soft); flex-shrink:0; }
+  .rk.m1{ font-size:20px; } .rk.m2{ font-size:18px; } .rk.m3{ font-size:17px; }
+  .who{ width: 96px; flex-shrink:0; }
+  .who .nm{ font-weight:700; font-size:14.5px; line-height:1.2; }
+  .who .dp{ font-size:10.5px; color:var(--ink-soft); }
+  .barzone{ flex:1; min-width:0; }
+  .bar{ display:flex; height: 22px; border-radius: 6px; overflow:hidden; background:#f0ece1; }
+  .seg{ height:100%; }
+  .seg.labor{ background: var(--navy-2); }
+  .seg.parts{ background: var(--amber); }
+  .seg.out{ background: var(--blue); }
+  .amt{ width: 108px; text-align:right; font-family:'Roboto Mono',monospace; font-weight:700; font-size:14.5px; flex-shrink:0; }
+  .amt small{ display:block; font-weight:400; font-size:10.5px; color:var(--ink-soft); }
+
+  .empty{ color:var(--ink-soft); font-size:14px; padding: 18px 4px 22px; }
+  .foot{ text-align:center; color:var(--ink-soft); font-size:11.5px; margin-top:8px; }
+  #loading{ text-align:center; padding: 80px 20px; color:var(--ink-soft); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">CHOCOLATE MOTORS</div>
+  <h1>全員業績總覽</h1>
+  <div class="sub" id="subTitle">載入中…</div>
+</div>
+
+<div class="wrap">
+  <div id="loading">📊 資料載入中，請稍候…</div>
+  <div id="content" style="display:none">
+    <div class="loc-tabs" id="locTabs"></div>
+    <div class="kpi-row" id="kpiRow"></div>
+    <div class="board" id="boardTech"></div>
+    <div class="board" id="boardAdv"></div>
+    <div class="foot">金額均為未稅業績（與業績查詢 App 相同口徑）｜資料來源：每日 205／1G0 報表自動匯入</div>
+  </div>
+</div>
+
+<script>
+const el = id => document.getElementById(id);
+const fmt = n => Math.round(n||0).toLocaleString('zh-TW');
+let DATA = null;
+let curLoc = '永康';
+
+// 🦞 與 技師業績.html 的 sumMonthToDate 同一套口徑：本月 = 加總當月每日快照
+function monthlySums(perf){
+  const curMonth = new Date().toISOString().slice(0,7);
+  const map = new Map();
+  (perf||[]).forEach(r => {
+    if (!r.period_end || !r.period_end.startsWith(curMonth)) return;
+    const key = r.location + '|' + r.role + '|' + r.employee;
+    if (!map.has(key)) map.set(key, { employee:r.employee, role:r.role, location:r.location, dept:r.dept,
+      order_count:0, hours:0, labor_amt:0, parts_amt:0, outsourced_amt:0, untaxed_amt:0, lastDay:'' });
+    const s = map.get(key);
+    s.order_count += r.order_count||0; s.hours += r.hours||0;
+    s.labor_amt += r.labor_amt||0; s.parts_amt += r.parts_amt||0;
+    s.outsourced_amt += r.outsourced_amt||0; s.untaxed_amt += r.untaxed_amt||0;
+    if (r.period_end > s.lastDay) { s.lastDay = r.period_end; s.dept = r.dept; }
+  });
+  return [...map.values()];
+}
+
+function medal(i){ return i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1); }
+
+function renderBoard(elId, title, rows){
+  const box = el(elId);
+  if (!rows.length){
+    box.innerHTML = `<h2>${title} <span class="count">0 人</span></h2><div class="empty">本月尚無資料（報表尚未匯入）</div>`;
+    return;
+  }
+  const max = Math.max(...rows.map(r=>r.untaxed_amt), 1);
+  box.innerHTML = `
+    <h2>${title} <span class="count">${rows.length} 人｜按本月業績排名</span></h2>
+    <div class="legend">
+      <span class="lg-labor"><i></i>工資</span>
+      <span class="lg-parts"><i></i>零件</span>
+      <span class="lg-out"><i></i>外修</span>
+    </div>
+    ${rows.map((r,i)=>{
+      const w = Math.max(2, r.untaxed_amt/max*100);
+      const base = (r.labor_amt + r.parts_amt + r.outsourced_amt) || 1;
+      const wl = r.labor_amt/base*w, wp = r.parts_amt/base*w, wo = r.outsourced_amt/base*w;
+      return `<div class="rankrow">
+        <div class="rk ${i<3?'m'+(i+1):''}">${medal(i)}</div>
+        <div class="who"><div class="nm">${r.employee}</div><div class="dp">${r.dept||''}</div></div>
+        <div class="barzone"><div class="bar">
+          <div class="seg labor" style="width:${wl}%"></div>
+          <div class="seg parts" style="width:${wp}%"></div>
+          <div class="seg out" style="width:${wo}%"></div>
+        </div></div>
+        <div class="amt">$${fmt(r.untaxed_amt)}<small>${r.order_count} 張工單</small></div>
+      </div>`;
+    }).join('')}
+  `;
+}
+
+function render(){
+  const sums = monthlySums(DATA.performance).filter(s => s.location === curLoc);
+  const tech = sums.filter(s=>s.role==='技師').sort((a,b)=>b.untaxed_amt-a.untaxed_amt);
+  const adv  = sums.filter(s=>s.role==='接待').sort((a,b)=>b.untaxed_amt-a.untaxed_amt);
+
+  const total = sums.reduce((a,s)=>a+s.untaxed_amt,0);
+  const orders = sums.reduce((a,s)=>a+s.order_count,0);
+  const lastDay = sums.reduce((a,s)=> s.lastDay>a?s.lastDay:a, '');
+
+  const curMonth = new Date().toISOString().slice(0,7);
+  const target = (DATA.targets||[]).find(t => t._id === `${curLoc}_${curMonth}`);
+  const pct = target && target.target_amt ? Math.round(total/target.target_amt*100) : null;
+
+  el('kpiRow').innerHTML = `
+    <div class="kpi hero"><div class="label">${curLoc}廠 本月累計業績</div><div class="value">$${fmt(total)}</div></div>
+    <div class="kpi"><div class="label">月目標達成</div><div class="value">${pct!==null? pct+'<small>%</small>' : '－<small>未設定</small>'}</div></div>
+    <div class="kpi"><div class="label">工單數</div><div class="value">${fmt(orders)}<small>張</small></div></div>
+    <div class="kpi"><div class="label">資料截至</div><div class="value" style="font-size:17px">${lastDay || '—'}</div></div>
+  `;
+
+  renderBoard('boardTech', '🔧 承修技師排行', tech);
+  renderBoard('boardAdv', '🤝 接待專員排行', adv);
+}
+
+function renderTabs(){
+  const sums = monthlySums(DATA.performance);
+  el('locTabs').innerHTML = ['永康','歸仁'].map(loc=>{
+    const n = sums.filter(s=>s.location===loc).length;
+    return `<div class="loc-tab ${loc===curLoc?'active':''}" onclick="switchLoc('${loc}')">${loc}廠<small>${n} 人有本月資料</small></div>`;
+  }).join('');
+}
+function switchLoc(loc){ curLoc = loc; renderTabs(); render(); }
+
+async function init(){
+  try{
+    const res = await fetch('/api/my-performance?code=mgr_gm');
+    DATA = await res.json();
+    if (!DATA.ok) throw new Error(DATA.error||'讀取失敗');
+    const m = new Date();
+    el('subTitle').textContent = `${m.getFullYear()} 年 ${m.getMonth()+1} 月｜技師＋接待專員全員排名`;
+    el('loading').style.display = 'none';
+    el('content').style.display = '';
+    // 預設顯示有資料的廠
+    const sums = monthlySums(DATA.performance);
+    if (!sums.some(s=>s.location==='永康') && sums.some(s=>s.location==='歸仁')) curLoc = '歸仁';
+    renderTabs(); render();
+  }catch(e){
+    el('loading').textContent = '❌ 載入失敗：' + e.message;
+  }
+}
+init();
+</script>
+</body>
+</html>
