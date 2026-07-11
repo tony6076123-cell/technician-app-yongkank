@@ -17,6 +17,7 @@
     --labor: #2e5da8;   /* 藍色＝工資 */
     --parts: #e2a72e;   /* 黃色＝零件 */
     --out:   #56b4d3;   /* 水藍＝外修 */
+    --green: #3a7d5c;
     --radius: 14px;
   }
   *{box-sizing:border-box;}
@@ -32,29 +33,46 @@
 
   .topbar{
     background: var(--navy); color:#f3f0e8;
-    padding: 20px 22px; position: sticky; top:0; z-index:20;
+    padding: 18px 22px; position: sticky; top:0; z-index:20;
     box-shadow: 0 4px 14px rgba(22,35,61,0.25);
   }
-  .topbar .brand{ font-size:12px; letter-spacing:.14em; opacity:.65; text-transform:uppercase; font-family:'Roboto Mono',monospace; }
-  .topbar h1{ margin:4px 0 0; font-size:24px; font-weight:900; letter-spacing:.02em; }
-  .topbar .sub{ margin-top:6px; font-size:13px; opacity:.75; }
-
-  .wrap{ max-width: 1080px; margin: 0 auto; padding: 20px 18px 60px; }
-
-  .loc-tabs{ display:flex; gap:10px; margin: 4px 0 18px; }
-  .loc-tab{
-    flex:1; text-align:center; padding: 13px 10px; border-radius: 12px;
-    border:1.5px solid var(--line); background: var(--paper-2);
-    font-size:16px; font-weight:700; cursor:pointer; user-select:none;
+  .topbar .brand{ font-size:11px; letter-spacing:.14em; opacity:.65; text-transform:uppercase; font-family:'Roboto Mono',monospace; }
+  .topbar h1{ margin:4px 0 0; font-size:22px; font-weight:900; letter-spacing:.02em; }
+  .topbar .sub{ margin-top:5px; font-size:12.5px; opacity:.75; }
+  .back-btn{
+    display:none; background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.3);
+    color:#f3f0e8; border-radius:999px; padding:6px 16px; font-size:13px; cursor:pointer; margin-bottom:8px;
   }
-  .loc-tab.active{ background: var(--navy); color:#fff; border-color: var(--navy); }
-  .loc-tab small{ display:block; font-weight:400; font-size:11px; opacity:.65; margin-top:2px; }
 
-  .kpi-row{ display:grid; grid-template-columns: repeat(4, 1fr); gap:12px; margin-bottom: 22px; }
+  .wrap{ max-width: 1080px; margin: 0 auto; padding: 22px 18px 60px; }
+  #loading{ text-align:center; padding: 80px 20px; color:var(--ink-soft); }
+
+  /* ===== 首頁：廠卡 ===== */
+  .home-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+  @media (max-width: 680px){ .home-grid{ grid-template-columns: 1fr; } }
+  .plant-card{
+    background: var(--paper-2); border:1.5px solid var(--line); border-radius: 18px;
+    padding: 24px 24px 20px; cursor:pointer; transition: transform .12s, box-shadow .12s;
+  }
+  .plant-card:hover{ transform: translateY(-2px); box-shadow: 0 8px 22px rgba(22,35,61,.12); }
+  .plant-card .pname{ font-size:20px; font-weight:900; display:flex; justify-content:space-between; align-items:center; }
+  .plant-card .pname .arrow{ color:var(--ink-soft); font-size:22px; }
+  .plant-card .plabel{ font-size:12px; color:var(--ink-soft); margin-top:16px; }
+  .plant-card .pamt{ font-size:30px; font-weight:900; font-family:'Roboto Mono',monospace; margin-top:2px; }
+  .pg-wrap{ margin-top:14px; }
+  .pg-head{ display:flex; justify-content:space-between; font-size:12px; color:var(--ink-soft); margin-bottom:5px; }
+  .pg-head b{ color:var(--ink); font-family:'Roboto Mono',monospace; }
+  .pg{ height:12px; border-radius:999px; background:#efe9db; overflow:hidden; }
+  .pg i{ display:block; height:100%; border-radius:999px; background: linear-gradient(90deg, var(--labor), #4d7fc9); }
+  .pg i.done{ background: linear-gradient(90deg, var(--green), #57a37e); }
+  .plant-card .pmeta{ margin-top:12px; font-size:12px; color:var(--ink-soft); display:flex; justify-content:space-between; }
+
+  /* ===== 廠內頁 ===== */
+  .kpi-row{ display:grid; grid-template-columns: repeat(4, 1fr); gap:12px; margin-bottom: 18px; }
   @media (max-width: 720px){ .kpi-row{ grid-template-columns: repeat(2, 1fr); } }
   .kpi{ background: var(--paper-2); border:1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
   .kpi .label{ font-size:12px; color:var(--ink-soft); }
-  .kpi .value{ font-size:24px; font-weight:900; margin-top:4px; font-family:'Roboto Mono',monospace; }
+  .kpi .value{ font-size:23px; font-weight:900; margin-top:4px; font-family:'Roboto Mono',monospace; }
   .kpi .value small{ font-size:12px; font-weight:400; color:var(--ink-soft); margin-left:2px; }
   .kpi.hero{ background: var(--navy); border-color: var(--navy); color:#fff; }
   .kpi.hero .label{ color:rgba(255,255,255,.65); }
@@ -62,17 +80,31 @@
 
   .board{
     background: var(--paper-2); border:1px solid var(--line); border-radius: var(--radius);
-    padding: 18px 18px 10px; margin-bottom: 22px;
+    padding: 18px 18px 12px; margin-bottom: 18px;
   }
-  .board h2{ margin:0 0 2px; font-size:17px; font-weight:900; display:flex; align-items:baseline; gap:8px; }
+  .board h2{ margin:0 0 2px; font-size:16.5px; font-weight:900; display:flex; align-items:baseline; gap:8px; }
   .board h2 .count{ font-size:12px; font-weight:400; color:var(--ink-soft); }
   .board .legend{ display:flex; gap:14px; font-size:12px; color:var(--ink-soft); margin: 8px 0 4px; flex-wrap:wrap; }
   .legend i{ display:inline-block; width:11px; height:11px; border-radius:3px; margin-right:4px; vertical-align:-1px; }
   .lg-labor i{ background: var(--labor); }
   .lg-parts i{ background: var(--parts); }
   .lg-out i{ background: var(--out); }
-  .hint{ font-size:11.5px; color:var(--ink-soft); margin: 0 0 12px; }
+  .hint{ font-size:11.5px; color:var(--ink-soft); margin: 0 0 10px; }
 
+  /* 每日達成率 */
+  .dayrate{ padding-bottom: 6px; }
+  .dayrate .dayrow .dv{ width: 150px; }
+  .dayrow{ display:flex; align-items:center; gap:10px; padding:4px 0; font-size:13px; }
+  .dayrow .dt{ width:64px; font-family:'Roboto Mono',monospace; color:var(--ink-soft); flex-shrink:0; }
+  .dayrow .dbar{ flex:1; height:14px; border-radius:4px; background:#efe9db; overflow:hidden; }
+  .dayrow .dbar i{ display:block; height:100%; border-radius:4px; }
+  .dayrow .dv{ width:92px; text-align:right; font-family:'Roboto Mono',monospace; font-weight:700; flex-shrink:0; }
+  .dayrow .dv small{ font-weight:400; color:var(--ink-soft); }
+  .dayrow.total{ border-top:1px solid var(--line); margin-top:5px; padding-top:7px; font-weight:900; }
+  .dayrow.total .dt{ color:var(--ink); font-weight:900; }
+  .noneset{ font-size:13px; color:var(--ink-soft); padding: 8px 0 4px; }
+
+  /* 排行列 */
   .rankrow{ display:flex; align-items:center; gap:10px; padding: 8px 0; border-top: 1px dashed #eae5d8; }
   .rk{ width: 34px; text-align:center; font-family:'Roboto Mono',monospace; font-weight:700; font-size:15px; color:var(--ink-soft); flex-shrink:0; }
   .rk.m1{ font-size:20px; } .rk.m2{ font-size:18px; } .rk.m3{ font-size:17px; }
@@ -81,7 +113,7 @@
   .who .dp{ font-size:10.5px; color:var(--ink-soft); }
   .barzone{ flex:1; min-width:0; }
   .bar{ display:flex; height: 26px; border-radius: 7px; overflow:hidden; background:#f0ece1; }
-  .seg{ height:100%; cursor:pointer; transition: filter .15s; position:relative; }
+  .seg{ height:100%; cursor:pointer; transition: filter .15s; }
   .seg:hover{ filter: brightness(1.15); }
   .seg.labor{ background: var(--labor); }
   .seg.parts{ background: var(--parts); }
@@ -111,15 +143,8 @@
   .chip.on.parts{ background:var(--parts); color:#fff; border-color:var(--parts); }
   .chip.on.out{ background:var(--out); color:#fff; border-color:var(--out); }
   .chip.on i{ background:#fff; }
-
   .dsec-title{ font-size:12px; color:var(--ink-soft); margin: 12px 0 6px; font-weight:700; }
-  .dayrow{ display:flex; align-items:center; gap:10px; padding:3px 0; font-size:13px; }
-  .dayrow .dt{ width:88px; font-family:'Roboto Mono',monospace; color:var(--ink-soft); flex-shrink:0; }
-  .dayrow .dbar{ flex:1; height:14px; border-radius:4px; background:#efe9db; overflow:hidden; }
-  .dayrow .dbar i{ display:block; height:100%; border-radius:4px; }
-  .dayrow .dv{ width:92px; text-align:right; font-family:'Roboto Mono',monospace; font-weight:700; flex-shrink:0; }
-  .dayrow.total{ border-top:1px solid var(--line); margin-top:5px; padding-top:7px; font-weight:900; }
-  .dayrow.total .dt{ color:var(--ink); font-weight:900; }
+  .detail .dayrow .dt{ width:88px; }
 
   table.items{ width:100%; border-collapse:collapse; font-size:12.5px; margin-top:4px; }
   table.items th{ text-align:left; color:var(--ink-soft); font-weight:500; font-size:11px; padding:4px 6px; border-bottom:1px solid var(--line); }
@@ -129,22 +154,30 @@
 
   .empty{ color:var(--ink-soft); font-size:14px; padding: 18px 4px 22px; }
   .foot{ text-align:center; color:var(--ink-soft); font-size:11.5px; margin-top:8px; }
-  #loading{ text-align:center; padding: 80px 20px; color:var(--ink-soft); }
 </style>
 </head>
 <body>
 
 <div class="topbar">
+  <button class="back-btn" id="backBtn" onclick="goHome()">‹ 回廠區總覽</button>
   <div class="brand">CHOCOLATE MOTORS</div>
-  <h1>全員業績總覽</h1>
+  <h1 id="pageTitle">全員業績總覽</h1>
   <div class="sub" id="subTitle">載入中…</div>
 </div>
 
 <div class="wrap">
   <div id="loading">📊 資料載入中，請稍候…</div>
-  <div id="content" style="display:none">
-    <div class="loc-tabs" id="locTabs"></div>
+
+  <!-- 首頁：兩廠卡片 -->
+  <div id="homeView" style="display:none">
+    <div class="home-grid" id="homeGrid"></div>
+    <div class="foot">點選廠區查看每日達成率與全員排行｜金額均為未稅業績</div>
+  </div>
+
+  <!-- 廠內頁 -->
+  <div id="plantView" style="display:none">
     <div class="kpi-row" id="kpiRow"></div>
+    <div class="board dayrate" id="rateBoard"></div>
     <div class="board" id="boardTech"></div>
     <div class="board" id="boardAdv"></div>
     <div class="foot">金額均為未稅業績（與業績查詢 App 相同口徑）｜資料來源：每日 205／1G0 報表自動匯入</div>
@@ -157,17 +190,20 @@ const fmt = n => Math.round(n||0).toLocaleString('zh-TW');
 const CATS = { labor:{name:'工資', color:'var(--labor)', field:'labor_amt'},
                parts:{name:'零件', color:'var(--parts)', field:'parts_amt'},
                out:{name:'外修', color:'var(--out)', field:'outsourced_amt'} };
+const LOCS = ['永康','歸仁'];
 let DATA = null;
-let curLoc = '永康';
-let openKey = null;   // 目前展開的人 (location|role|employee)
-let openCat = null;   // 目前展開的類別 labor/parts/out
+let curLoc = null;    // null = 首頁
+let openKey = null;
+let openCat = null;
+
+const curMonth = () => new Date().toISOString().slice(0,7);
 
 // 🦞 與 技師業績.html 的 sumMonthToDate 同一套口徑：本月 = 加總當月每日快照
 function monthlySums(perf){
-  const curMonth = new Date().toISOString().slice(0,7);
+  const cm = curMonth();
   const map = new Map();
   (perf||[]).forEach(r => {
-    if (!r.period_end || !r.period_end.startsWith(curMonth)) return;
+    if (!r.period_end || !r.period_end.startsWith(cm)) return;
     const key = r.location + '|' + r.role + '|' + r.employee;
     if (!map.has(key)) map.set(key, { key, employee:r.employee, role:r.role, location:r.location, dept:r.dept,
       order_count:0, hours:0, labor_amt:0, parts_amt:0, outsourced_amt:0, untaxed_amt:0, lastDay:'' });
@@ -180,19 +216,39 @@ function monthlySums(perf){
   return [...map.values()];
 }
 
-// 某人當月每日快照（日累計列表用）
+// 某廠當月逐日全廠業績（date → 當日全廠未稅合計）
+function plantDaily(loc){
+  const cm = curMonth();
+  const byDay = new Map();
+  (DATA.performance||[]).forEach(r => {
+    if (r.location !== loc || !r.period_end || !r.period_end.startsWith(cm)) return;
+    byDay.set(r.period_end, (byDay.get(r.period_end)||0) + (r.untaxed_amt||0));
+  });
+  return [...byDay.entries()].map(([d,v])=>({date:d, amt:v})).sort((a,b)=>a.date.localeCompare(b.date));
+}
+
+function plantStats(loc){
+  const sums = monthlySums(DATA.performance).filter(s => s.location === loc);
+  const total = sums.reduce((a,s)=>a+s.untaxed_amt,0);
+  const orders = sums.reduce((a,s)=>a+s.order_count,0);
+  const lastDay = sums.reduce((a,s)=> s.lastDay>a?s.lastDay:a, '');
+  const target = (DATA.targets||[]).find(t => t._id === `${loc}_${curMonth()}`);
+  const targetAmt = target ? (target.target_amt||0) : 0;
+  const pct = targetAmt ? Math.round(total/targetAmt*1000)/10 : null;
+  return { loc, sums, total, orders, lastDay, targetAmt, pct, people: sums.length };
+}
+
 function dailyRows(employee, role, location){
-  const curMonth = new Date().toISOString().slice(0,7);
+  const cm = curMonth();
   return (DATA.performance||[]).filter(p => p.employee===employee && p.role===role && p.location===location
-      && p.period_end && p.period_end.startsWith(curMonth))
+      && p.period_end && p.period_end.startsWith(cm))
     .sort((a,b)=>a.period_end.localeCompare(b.period_end));
 }
 
-// 零件品項明細：當月加總（來自1G0報表 technician_parts_summary）
 function partsItems(employee, location){
-  const curMonth = new Date().toISOString().slice(0,7);
+  const cm = curMonth();
   const rows = (DATA.parts||[]).filter(p => p.employee===employee && p.location===location
-      && p.period_end && p.period_end.startsWith(curMonth));
+      && p.period_end && p.period_end.startsWith(cm));
   const itemMap = new Map();
   rows.forEach(r => {
     let items = [];
@@ -208,6 +264,93 @@ function partsItems(employee, location){
 
 function medal(i){ return i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1); }
 
+/* ===== 首頁 ===== */
+function goHome(){
+  curLoc = null; openKey = null; openCat = null;
+  el('backBtn').style.display = 'none';
+  el('pageTitle').textContent = '全員業績總覽';
+  const m = new Date();
+  el('subTitle').textContent = `${m.getFullYear()} 年 ${m.getMonth()+1} 月｜選擇廠區`;
+  el('plantView').style.display = 'none';
+  el('homeView').style.display = '';
+  el('homeGrid').innerHTML = LOCS.map(loc => {
+    const st = plantStats(loc);
+    const pctBar = st.pct !== null ? Math.min(100, st.pct) : 0;
+    return `<div class="plant-card" onclick="openPlant('${loc}')">
+      <div class="pname">${loc}廠 <span class="arrow">›</span></div>
+      <div class="plabel">本月累計業績</div>
+      <div class="pamt">$${fmt(st.total)}</div>
+      <div class="pg-wrap">
+        <div class="pg-head"><span>月目標達成</span>
+          <b>${st.pct !== null ? st.pct + '%' : '目標未設定'}</b></div>
+        <div class="pg"><i class="${st.pct !== null && st.pct >= 100 ? 'done':''}" style="width:${pctBar}%"></i></div>
+        <div class="pg-head" style="margin-top:5px"><span>月目標</span>
+          <b>${st.targetAmt ? '$'+fmt(st.targetAmt) : '—'}</b></div>
+      </div>
+      <div class="pmeta"><span>${st.people} 人有本月資料</span><span>資料截至 ${st.lastDay || '—'}</span></div>
+    </div>`;
+  }).join('');
+}
+
+/* ===== 廠內頁 ===== */
+function openPlant(loc){
+  curLoc = loc; openKey = null; openCat = null;
+  el('backBtn').style.display = 'inline-block';
+  el('homeView').style.display = 'none';
+  el('plantView').style.display = '';
+  render();
+}
+
+function render(){
+  const st = plantStats(curLoc);
+  el('pageTitle').textContent = `${curLoc}廠 業績總覽`;
+  const m = new Date();
+  el('subTitle').textContent = `${m.getFullYear()} 年 ${m.getMonth()+1} 月｜技師＋接待專員全員排名`;
+
+  el('kpiRow').innerHTML = `
+    <div class="kpi hero"><div class="label">${curLoc}廠 本月累計業績</div><div class="value">$${fmt(st.total)}</div></div>
+    <div class="kpi"><div class="label">月目標達成</div><div class="value">${st.pct!==null? st.pct+'<small>%</small>' : '－<small>未設定</small>'}</div></div>
+    <div class="kpi"><div class="label">工單數</div><div class="value">${fmt(st.orders)}<small>張</small></div></div>
+    <div class="kpi"><div class="label">資料截至</div><div class="value" style="font-size:17px">${st.lastDay || '—'}</div></div>
+  `;
+
+  // 每日達成率
+  const days = plantDaily(curLoc);
+  let rateHTML = `<h2>📈 每日達成率 <span class="count">當日業績／累計達成率</span></h2>`;
+  if (!st.targetAmt){
+    rateHTML += `<div class="noneset">尚未設定 ${curLoc}廠 ${curMonth()} 月目標，無法計算達成率（管理層可在查詢 App 設定）</div>`;
+    if (days.length){
+      const maxD = Math.max(...days.map(d=>d.amt),1);
+      rateHTML += days.map(d=>`<div class="dayrow">
+        <div class="dt">${d.date.slice(5)}</div>
+        <div class="dbar"><i style="width:${Math.max(1,d.amt/maxD*100)}%; background:var(--labor)"></i></div>
+        <div class="dv">$${fmt(d.amt)}</div>
+      </div>`).join('');
+    }
+  } else if (!days.length){
+    rateHTML += `<div class="noneset">本月尚無每日資料</div>`;
+  } else {
+    let cum = 0;
+    rateHTML += days.map(d=>{
+      cum += d.amt;
+      const pct = Math.round(cum/st.targetAmt*1000)/10;
+      return `<div class="dayrow">
+        <div class="dt">${d.date.slice(5)}</div>
+        <div class="dbar"><i style="width:${Math.min(100,pct)}%; background:${pct>=100?'var(--green)':'var(--labor)'}"></i></div>
+        <div class="dv">${pct}%<small> ($${fmt(d.amt)})</small></div>
+      </div>`;
+    }).join('');
+    rateHTML += `<div class="dayrow total"><div class="dt">月累計</div><div class="dbar" style="background:none"></div>
+      <div class="dv">${st.pct}%<small> ($${fmt(st.total)})</small></div></div>`;
+  }
+  el('rateBoard').innerHTML = rateHTML;
+
+  const tech = st.sums.filter(s=>s.role==='技師').sort((a,b)=>b.untaxed_amt-a.untaxed_amt);
+  const adv  = st.sums.filter(s=>s.role==='接待').sort((a,b)=>b.untaxed_amt-a.untaxed_amt);
+  renderBoard('boardTech', '🔧 承修技師排行', tech);
+  renderBoard('boardAdv', '🤝 接待專員排行', adv);
+}
+
 function toggleDetail(key, cat){
   if (openKey === key && openCat === cat){ openKey = null; openCat = null; }
   else { openKey = key; openCat = cat; }
@@ -221,9 +364,8 @@ function detailHTML(s){
   const days = dailyRows(s.employee, s.role, s.location);
   const monthTotal = s[cat.field] || 0;
   const maxDay = Math.max(...days.map(d=>d[cat.field]||0), 1);
-  let cum = 0;
   const dayList = days.map(d => {
-    const v = d[cat.field]||0; cum += v;
+    const v = d[cat.field]||0;
     return `<div class="dayrow">
       <div class="dt">${(d.period_end||'').slice(5)}</div>
       <div class="dbar"><i style="width:${Math.max(1,v/maxDay*100)}%; background:${cat.color}"></i></div>
@@ -303,39 +445,6 @@ function renderBoard(elId, title, rows){
   `;
 }
 
-function render(){
-  const sums = monthlySums(DATA.performance).filter(s => s.location === curLoc);
-  const tech = sums.filter(s=>s.role==='技師').sort((a,b)=>b.untaxed_amt-a.untaxed_amt);
-  const adv  = sums.filter(s=>s.role==='接待').sort((a,b)=>b.untaxed_amt-a.untaxed_amt);
-
-  const total = sums.reduce((a,s)=>a+s.untaxed_amt,0);
-  const orders = sums.reduce((a,s)=>a+s.order_count,0);
-  const lastDay = sums.reduce((a,s)=> s.lastDay>a?s.lastDay:a, '');
-
-  const curMonth = new Date().toISOString().slice(0,7);
-  const target = (DATA.targets||[]).find(t => t._id === `${curLoc}_${curMonth}`);
-  const pct = target && target.target_amt ? Math.round(total/target.target_amt*100) : null;
-
-  el('kpiRow').innerHTML = `
-    <div class="kpi hero"><div class="label">${curLoc}廠 本月累計業績</div><div class="value">$${fmt(total)}</div></div>
-    <div class="kpi"><div class="label">月目標達成</div><div class="value">${pct!==null? pct+'<small>%</small>' : '－<small>未設定</small>'}</div></div>
-    <div class="kpi"><div class="label">工單數</div><div class="value">${fmt(orders)}<small>張</small></div></div>
-    <div class="kpi"><div class="label">資料截至</div><div class="value" style="font-size:17px">${lastDay || '—'}</div></div>
-  `;
-
-  renderBoard('boardTech', '🔧 承修技師排行', tech);
-  renderBoard('boardAdv', '🤝 接待專員排行', adv);
-}
-
-function renderTabs(){
-  const sums = monthlySums(DATA.performance);
-  el('locTabs').innerHTML = ['永康','歸仁'].map(loc=>{
-    const n = sums.filter(s=>s.location===loc).length;
-    return `<div class="loc-tab ${loc===curLoc?'active':''}" onclick="switchLoc('${loc}')">${loc}廠<small>${n} 人有本月資料</small></div>`;
-  }).join('');
-}
-function switchLoc(loc){ curLoc = loc; openKey=null; openCat=null; renderTabs(); render(); }
-
 // 🦞 免費雲端主機休眠喚醒需要幾十秒，第一次抓資料失敗就自動重試，不要直接顯示失敗
 async function init(){
   const MAX_TRY = 5;
@@ -345,13 +454,8 @@ async function init(){
       const res = await fetch('/api/my-performance?code=mgr_gm');
       DATA = await res.json();
       if (!DATA.ok) throw new Error(DATA.error||'讀取失敗');
-      const m = new Date();
-      el('subTitle').textContent = `${m.getFullYear()} 年 ${m.getMonth()+1} 月｜技師＋接待專員全員排名`;
       el('loading').style.display = 'none';
-      el('content').style.display = '';
-      const sums = monthlySums(DATA.performance);
-      if (!sums.some(s=>s.location==='永康') && sums.some(s=>s.location==='歸仁')) curLoc = '歸仁';
-      renderTabs(); render();
+      goHome();
       return;
     }catch(e){
       if (i === MAX_TRY){
