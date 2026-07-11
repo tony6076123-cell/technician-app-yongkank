@@ -26,6 +26,16 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // 🦞 老闆版全員總覽儀表板（全員排行榜一頁看完，不用逐人點選）
+  if (u.pathname === '/board') {
+    try {
+      const html = fs.readFileSync(path.join(__dirname, '業績總覽.html'), 'utf8');
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
+    } catch (e) { res.writeHead(404); res.end('找不到頁面'); }
+    return;
+  }
+
   if (u.pathname === '/api/tech-login' && req.method === 'POST') {
     let body = '';
     req.on('data', d => body += d);
