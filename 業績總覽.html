@@ -40,9 +40,21 @@
   .topbar h1{ margin:4px 0 0; font-size:22px; font-weight:900; letter-spacing:.02em; }
   .topbar .sub{ margin-top:5px; font-size:12.5px; opacity:.75; }
   .back-btn{
-    display:none; background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.3);
+    background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.3);
     color:#f3f0e8; border-radius:999px; padding:6px 16px; font-size:13px; cursor:pointer; margin-bottom:8px;
   }
+
+  /* 設定月目標彈窗 */
+  #tgOverlay{ display:none; position:fixed; inset:0; background:rgba(22,35,61,.45); z-index:50; align-items:center; justify-content:center; padding:20px; }
+  #tgModal{ background:#fff; border-radius:18px; padding:26px 24px; width:100%; max-width:360px; text-align:center; box-shadow:0 18px 50px rgba(0,0,0,.25); }
+  #tgModal h3{ margin:0 0 6px; font-size:18px; font-weight:900; }
+  #tgModal p{ margin:0 0 16px; font-size:12.5px; color:var(--ink-soft); }
+  #tgModal input{ width:100%; padding:13px; font-size:20px; text-align:center; border:1.5px solid var(--line); border-radius:12px; background:#fbfaf6; font-family:'Roboto Mono',monospace; }
+  #tgModal .btns{ display:flex; gap:10px; margin-top:16px; }
+  #tgModal button{ flex:1; padding:12px; font-size:15px; font-weight:700; border:none; border-radius:12px; cursor:pointer; }
+  #tgModal .ok{ background:var(--navy); color:#fff; }
+  #tgModal .cancel{ background:#ece7da; color:var(--ink-soft); }
+  #tgErr{ color:#b5432f; font-size:12.5px; min-height:18px; margin-top:10px; }
 
   .wrap{ max-width: 1080px; margin: 0 auto; padding: 22px 18px 60px; }
   #loading{ text-align:center; padding: 80px 20px; color:var(--ink-soft); }
@@ -167,7 +179,7 @@
 <body>
 
 <div class="topbar">
-  <button class="back-btn" id="backBtn" onclick="goHome()">‹ 回廠區總覽</button>
+  <button class="back-btn" id="backBtn" onclick="goBack()">‹ 回主選單</button>
   <div class="brand">CHOCOLATE MOTORS</div>
   <h1 id="pageTitle">全員業績總覽</h1>
   <div class="sub" id="subTitle">載入中…</div>
@@ -189,6 +201,20 @@
     <div class="board" id="boardTech"></div>
     <div class="board" id="boardAdv"></div>
     <div class="foot">金額均為未稅業績｜資料來源：每日 205／1G0 報表自動匯入</div>
+  </div>
+</div>
+
+<!-- 設定月目標彈窗 -->
+<div id="tgOverlay">
+  <div id="tgModal">
+    <h3 id="tgTitle">設定月目標</h3>
+    <p id="tgDesc"></p>
+    <input type="text" id="tgInput" inputmode="numeric" placeholder="例：6000000" onkeydown="if(event.key==='Enter')submitTarget()">
+    <div id="tgErr"></div>
+    <div class="btns">
+      <button class="cancel" onclick="closeTarget()">取消</button>
+      <button class="ok" onclick="submitTarget()">確定</button>
+    </div>
   </div>
 </div>
 
@@ -275,7 +301,7 @@ function medal(i){ return i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1); }
 /* ===== 首頁 ===== */
 function goHome(){
   curLoc = null; openKey = null; openCat = null;
-  el('backBtn').style.display = 'none';
+  el('backBtn').textContent = '‹ 回主選單';
   el('pageTitle').textContent = '全員業績總覽';
   const m = new Date();
   el('subTitle').textContent = `${m.getFullYear()} 年 ${m.getMonth()+1} 月｜選擇廠區`;
@@ -303,7 +329,7 @@ function goHome(){
 /* ===== 廠內頁 ===== */
 function openPlant(loc){
   curLoc = loc; openKey = null; openCat = null;
-  el('backBtn').style.display = 'inline-block';
+  el('backBtn').textContent = '‹ 回廠區總覽';
   el('homeView').style.display = 'none';
   el('plantView').style.display = '';
   render();
@@ -359,13 +385,30 @@ function render(){
   renderBoard('boardAdv', '🤝 接待專員排行', adv);
 }
 
-// 🦞 設定/修改月目標：寫進 monthly_targets（同查詢App的 /api/set-target，僅管理層可寫）
-async function setTarget(loc){
+// 🦞 返回鍵：廠內頁→廠區總覽；廠區總覽→App主選單
+function goBack(){
+  if (curLoc !== null){ goHome(); }
+  else { window.location.href = '/'; }
+}
+
+// 🦞 設定/修改月目標：彈出視窗輸入（不用 prompt，部分手機瀏覽器會擋 prompt）
+let tgLoc = null;
+function setTarget(loc){
+  tgLoc = loc;
   const cur = (DATA.targets||[]).find(t => t._id === `${loc}_${curMonth()}`);
-  const input = prompt(`請輸入 ${loc}廠 ${curMonth()} 的月目標金額（元）：`, cur ? cur.target_amt : '');
-  if (input === null) return;
-  const amt = Number(String(input).replace(/[,\s元$]/g, ''));
-  if (!amt || amt <= 0){ alert('請輸入正確的金額數字'); return; }
+  el('tgTitle').textContent = `${loc}廠 設定月目標`;
+  el('tgDesc').textContent = `${curMonth()} 的目標金額（元）`;
+  el('tgInput').value = cur ? cur.target_amt : '';
+  el('tgErr').textContent = '';
+  el('tgOverlay').style.display = 'flex';
+  setTimeout(()=>el('tgInput').focus(), 50);
+}
+function closeTarget(){ el('tgOverlay').style.display = 'none'; tgLoc = null; }
+async function submitTarget(){
+  const loc = tgLoc;
+  const amt = Number(String(el('tgInput').value).replace(/[,\s元$]/g, ''));
+  if (!amt || amt <= 0){ el('tgErr').textContent = '請輸入正確的金額數字'; return; }
+  el('tgErr').textContent = '儲存中…';
   try{
     const res = await fetch('/api/set-target', {
       method:'POST', headers:{'Content-Type':'application/json'},
@@ -373,15 +416,14 @@ async function setTarget(loc){
     });
     const r = await res.json();
     if (!r.ok) throw new Error(r.error||'寫入失敗');
-    // 更新本地資料立即重繪，不用整頁重載
     const id = `${loc}_${curMonth()}`;
     const t = (DATA.targets||[]).find(t => t._id === id);
     if (t) t.target_amt = amt;
     else { DATA.targets = DATA.targets||[]; DATA.targets.push({ _id:id, location:loc, target_amt:amt }); }
+    closeTarget();
     if (curLoc) render(); else goHome();
-    alert(`✅ ${loc}廠 ${curMonth()} 月目標已設為 $${amt.toLocaleString('zh-TW')}`);
   }catch(e){
-    alert('❌ 設定失敗：' + e.message);
+    el('tgErr').textContent = '❌ 設定失敗：' + e.message;
   }
 }
 
