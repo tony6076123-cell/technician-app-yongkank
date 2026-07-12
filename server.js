@@ -17,7 +17,17 @@ const server = http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') { res.writeHead(200); res.end(); return; }
 
-  if (u.pathname === '/' || u.pathname === '/tech') {
+  // 🦞 App 入口主選單（測試版）：三大功能一頁選
+  if (u.pathname === '/') {
+    try {
+      const html = fs.readFileSync(path.join(__dirname, '首頁.html'), 'utf8');
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
+    } catch (e) { res.writeHead(404); res.end('找不到頁面'); }
+    return;
+  }
+
+  if (u.pathname === '/tech') {
     try {
       const html = fs.readFileSync(path.join(__dirname, '技師業績.html'), 'utf8');
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
