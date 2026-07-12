@@ -5,7 +5,6 @@ const fs = require('fs');
 const path = require('path');
 const url = require('url');
 const { getValidFirebaseToken, readFirebase, saveToFirebase, seedTechniciansIfEmpty } = require('./lib.js');
-const { startGmailSyncLoop } = require('./gmail-sync.js');
 
 const PORT = process.env.PORT || 3000;
 const LOCATION = process.env.LOCATION || null; // 雲端部署設定：永康 或 歸仁，開機時空集合會自動建名單
@@ -137,7 +136,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // 手動觸發一次信箱掃描（測試用，正常情況每2小時會自動跑）
+  // 手動/排程觸發一次信箱掃描（每天早上9點由 GitHub Actions 呼叫）
   if (u.pathname === '/api/sync-now' && req.method === 'POST') {
     try {
       const result = await require('./gmail-sync.js').syncOnce();
@@ -165,6 +164,8 @@ server.listen(PORT, async () => {
       console.log(`❌ 自動建立名單失敗: ${e.message}`);
     }
   }
-  // 🦞 啟動時先掃一次，之後每2小時自動掃一次自己的Gmail
-  startGmailSyncLoop();
+  // 🦞 2026-07-12起改為排程模式：不再每2小時自動掃描，
+  //    由 GitHub Actions 每天早上9點（台灣時間）呼叫 /api/sync-now 觸發掃描。
+  //    需要臨時補掃時也可手動 POST /api/sync-now。
+  console.log('📧 信箱掃描：排程模式（每天 09:00 由外部觸發 /api/sync-now）');
 });
