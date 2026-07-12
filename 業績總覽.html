@@ -250,7 +250,6 @@ function monthlySums(perf){
   return [...map.values()];
 }
 
-// 某廠當月逐日全廠業績（date → 當日全廠未稅合計）
 function plantDaily(loc){
   const cm = curMonth();
   const byDay = new Map();
@@ -298,7 +297,6 @@ function partsItems(employee, location){
 
 function medal(i){ return i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1); }
 
-/* ===== 首頁 ===== */
 function goHome(){
   curLoc = null; openKey = null; openCat = null;
   el('backBtn').textContent = '‹ 回主選單';
@@ -326,7 +324,6 @@ function goHome(){
   }).join('');
 }
 
-/* ===== 廠內頁 ===== */
 function openPlant(loc){
   curLoc = loc; openKey = null; openCat = null;
   el('backBtn').textContent = '‹ 回廠區總覽';
@@ -348,7 +345,6 @@ function render(){
     <div class="kpi"><div class="label">資料截至</div><div class="value" style="font-size:17px">${st.lastDay || '—'}</div></div>
   `;
 
-  // 每日達成率
   const days = plantDaily(curLoc);
   let rateHTML = `<h2>📈 每日達成率 <span class="count">當日業績／累計達成率</span></h2>`;
   if (!st.targetAmt){
@@ -385,13 +381,11 @@ function render(){
   renderBoard('boardAdv', '🤝 接待專員排行', adv);
 }
 
-// 🦞 返回鍵：廠內頁→廠區總覽；廠區總覽→App主選單
 function goBack(){
   if (curLoc !== null){ goHome(); }
   else { window.location.href = '/'; }
 }
 
-// 🦞 設定/修改月目標：彈出視窗輸入（不用 prompt，部分手機瀏覽器會擋 prompt）
 let tgLoc = null;
 function setTarget(loc){
   tgLoc = loc;
@@ -521,13 +515,13 @@ function renderBoard(elId, title, rows){
   `;
 }
 
-// 🦞 免費雲端主機休眠喚醒需要幾十秒，第一次抓資料失敗就自動重試，不要直接顯示失敗
+// 🦞 免費雲端主機休眠喚醒約需50-60秒，重試時長涵蓋完整喚醒時間
 async function init(){
-  const MAX_TRY = 5;
+  const MAX_TRY = 12;
+  el('loading').innerHTML = '📊 資料載入中…<br><span style="font-size:12px;opacity:.7">首次開啟需喚醒伺服器，約需 1 分鐘，請稍候</span>';
   for (let i = 1; i <= MAX_TRY; i++){
     try{
-      if (i > 1) el('loading').textContent = `⏳ 伺服器喚醒中，自動重試（第 ${i}/${MAX_TRY} 次）…`;
-      const res = await fetch('/api/my-performance?code=mgr_gm');
+      const res = await fetch('/api/my-performance?code=mgr_gm', { cache:'no-store' });
       DATA = await res.json();
       if (!DATA.ok) throw new Error(DATA.error||'讀取失敗');
       el('loading').style.display = 'none';
@@ -535,9 +529,10 @@ async function init(){
       return;
     }catch(e){
       if (i === MAX_TRY){
-        el('loading').innerHTML = '❌ 載入失敗：' + e.message + '<br><br><button onclick="location.reload()" style="padding:10px 24px;font-size:15px;border:none;border-radius:10px;background:#16233d;color:#fff;cursor:pointer">🔄 再試一次</button>';
+        el('loading').innerHTML = '❌ 載入失敗，可能是網路或伺服器忙碌<br><br><button onclick="location.reload()" style="padding:10px 24px;font-size:15px;border:none;border-radius:10px;background:#16233d;color:#fff;cursor:pointer">🔄 再試一次</button>';
       } else {
-        await new Promise(r => setTimeout(r, 8000));
+        el('loading').innerHTML = `⏳ 伺服器喚醒中…（${i}/${MAX_TRY}）<br><span style="font-size:12px;opacity:.7">首次開啟約需 1 分鐘，請稍候</span>`;
+        await new Promise(r => setTimeout(r, 6000));
       }
     }
   }
