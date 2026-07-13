@@ -25,7 +25,6 @@
   .wrap{ max-width:1080px; margin:0 auto; padding:22px 18px 60px; }
   #loading{ text-align:center; padding:80px 20px; color:var(--ink-soft); }
 
-  /* 密碼鎖 */
   #lockView{ max-width:380px; margin:60px auto 0; background:var(--paper-2); border:1px solid var(--line); border-radius:18px; padding:30px 28px; text-align:center; }
   #lockView .lk{ font-size:40px; }
   #lockView h2{ margin:10px 0 4px; font-size:19px; font-weight:900; }
@@ -84,7 +83,6 @@
 </div>
 
 <div class="wrap">
-  <!-- 🔒 密碼鎖：限總經理/服務經理/永康廠長/歸仁廠長/特助（測試版共用密碼，正式版改個人密碼） -->
   <div id="lockView">
     <div class="lk">🔒</div>
     <h2>管理層專用頁面</h2>
@@ -111,7 +109,6 @@ const fmt = n => Math.round(n||0).toLocaleString('zh-TW');
 const LOCS = ['永康','歸仁'];
 let DATA = null, curLoc = null, openPerson = null;
 
-/* ===== 密碼鎖（測試版共用 1234，正式版再改個人密碼） ===== */
 const PASS = '1234';
 function unlock(){
   if (el('pwInput').value === PASS){
@@ -125,8 +122,8 @@ function unlock(){
   }
 }
 function goBack(){
-  if (curLoc !== null){ goHome(); }       // 廠內頁 → 廠區選擇
-  else { window.location.href = '/'; }    // 廠區選擇 → App 主選單
+  if (curLoc !== null){ goHome(); }
+  else { window.location.href = '/'; }
 }
 
 const curMonth = () => new Date().toISOString().slice(0,7);
@@ -172,12 +169,11 @@ function diffCell(cur, base, label){
   return `<span class="diff ${cls}">${label} ${sign}${fmt(d)} (${sign}${pct}%)</span>`;
 }
 
-/* ===== 詳細版改善施策（每項多步驟具體做法） ===== */
 const FIX = {
   labor: [
     '盤點該員當月工單結構：保養與維修的比例、平均單價，先分辨是「派工量不足」還是「單價偏低」',
     '調出定保到期與久未回廠客戶名單，由接待主動電邀回廠，優先排給該技師補足工時',
-    '檢查常規項目有無漏報價：雨刷、濾網、煞車油、冷卻水等到期更換是否每台車都有主動建議',
+    '檢查常規項目有無漏報價：雨刷、濾網、煔車油、冷卻水等到期更換是否每台車都有主動建議',
     '若連續兩個月落後，安排與廠長一對一檢討，確認技能或工位分配問題'
   ],
   parts: [
@@ -187,13 +183,13 @@ const FIX = {
     '每週檢視零件推銷率（有推銷工單數÷總工單數），目標先設 50% 以上'
   ],
   out: [
-    '接車時繞車檢查外觀，發現鈑烤需求當場拍照＋口頭報價，轉介給鈑金組',
-    '確認接待→鈑金組的轉介流程有無斷點，估價單當日回覆客戶',
+    '接車時繞車檢查外觀，發現鱈烤需求當場拍照＋口頭報價，轉介給鱈金組',
+    '確認接待→鱈金組的轉介流程有無斷點，估價單當日回覆客戶',
     '外包項目（玻璃、輪圈、內裝修復）建立協力廠報價SOP，避免因回覆慢流失訂單'
   ],
   tire: [
     '每台進廠車量測胎紋深度並記錄：低於4mm主動報價、低於2mm強烈建議立即更換（附安全話術）',
-    '檢查胎齡：超過5年即使胎紋足夠也要提醒橡膠老化風險',
+    '檢查胎齡：超遞5年即使胎紋足夠也要提醒橡膠老化風險',
     '搭配「四輪定位＋輪胎調位」套餐推薦，提高成交率與客單價',
     '對照去年同期銷售條數，設定本月要補回的具體條數目標'
   ],
@@ -363,13 +359,12 @@ function render(){
     '<div style="color:var(--ink-soft)">本月尚無資料</div>';
 }
 
-// 🦞 免費雲端主機喚醒自動重試
 async function init(){
-  const MAX_TRY = 5;
+  const MAX_TRY = 12;
+  el('loading').innerHTML = '📊 資料載入中…<br><span style="font-size:12px;opacity:.7">首次開啟需唤醒伺服器，約需 1 分鐘，請稍候</span>';
   for (let i=1;i<=MAX_TRY;i++){
     try{
-      if (i>1) el('loading').textContent = `⏳ 伺服器喚醒中，自動重試（第 ${i}/${MAX_TRY} 次）…`;
-      const res = await fetch('/api/my-performance?code=mgr_gm');
+      const res = await fetch('/api/my-performance?code=mgr_gm', { cache:'no-store' });
       DATA = await res.json();
       if (!DATA.ok) throw new Error(DATA.error||'讀取失敗');
       el('loading').style.display='none';
@@ -377,13 +372,15 @@ async function init(){
       return;
     }catch(e){
       if (i===MAX_TRY){
-        el('loading').innerHTML = '❌ 載入失敗：' + e.message + '<br><br><button onclick="location.reload()" style="padding:10px 24px;font-size:15px;border:none;border-radius:10px;background:#16233d;color:#fff;cursor:pointer">🔄 再試一次</button>';
-      } else { await new Promise(r=>setTimeout(r,8000)); }
+        el('loading').innerHTML = '❌ 載入失敗，可能是網路或伺服器忙碌<br><br><button onclick="location.reload()" style="padding:10px 24px;font-size:15px;border:none;border-radius:10px;background:#16233d;color:#fff;cursor:pointer">🔄 再試一次</button>';
+      } else {
+        el('loading').innerHTML = `⏳ 伺服器唤醒中…（${i}/${MAX_TRY}）<br><span style="font-size:12px;opacity:.7">首次開啟約需 1 分鐘，請稍候</span>`;
+        await new Promise(r=>setTimeout(r,6000));
+      }
     }
   }
 }
 
-// 已通過密碼就直接進，否則停在鎖畫面
 if (sessionStorage.getItem('review_ok') === '1'){
   el('lockView').style.display='none';
   el('loading').style.display='';
