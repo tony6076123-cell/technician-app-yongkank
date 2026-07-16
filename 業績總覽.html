@@ -250,21 +250,26 @@ function monthlySums(perf){
 }
 
 // 某廠當月逐日全廠業績（date → 當日全廠未稅合計）
+// 🦞 205報表「承修技師」view跟「服務專員」view未稅合計金額完全相同（同一批業績兩種切法，不是兩筆錢），
+// 全廠彙總只能取其中一邊（這裡固定用技師view，因為它是逐項目的完整明細），不能技師+接待相加，否則業績變兩倍
 function plantDaily(loc){
   const cm = curMonth();
   const byDay = new Map();
   (DATA.performance||[]).forEach(r => {
-    if (r.location !== loc || !r.period_end || !r.period_end.startsWith(cm)) return;
+    if (r.location !== loc || r.role !== '技師' || !r.period_end || !r.period_end.startsWith(cm)) return;
     byDay.set(r.period_end, (byDay.get(r.period_end)||0) + (r.untaxed_amt||0));
   });
-  return [...byDay.entries()].map(([d,v])=>({date:d, amt:v})).sort((a,b)=>a.date.localeCompare(b.date));
+  const all = [...byDay.entries()].map(([d,v])=>({date:d, amt:v})).sort((a,b)=>a.date.localeCompare(b.date));
+  // 只保留最新一筆快照（月累計數字），不要把過去不完整的舊快照當成獨立每日長條顯示
+  return all.length ? [all[all.length-1]] : [];
 }
 
 function plantStats(loc){
   const sums = monthlySums(DATA.performance).filter(s => s.location === loc);
-  const total = sums.reduce((a,s)=>a+s.untaxed_amt,0);
-  const orders = sums.reduce((a,s)=>a+s.order_count,0);
-  const lastDay = sums.reduce((a,s)=> s.lastDay>a?s.lastDay:a, '');
+  const techSums = sums.filter(s => s.role === '技師');
+  const total = techSums.reduce((a,s)=>a+s.untaxed_amt,0);
+  const orders = techSums.reduce((a,s)=>a+s.order_count,0);
+  const lastDay = techSums.reduce((a,s)=> s.lastDay>a?s.lastDay:a, '');
   const target = (DATA.targets||[]).find(t => t._id === `${loc}_${curMonth()}`);
   const targetAmt = target ? (target.target_amt||0) : 0;
   const pct = targetAmt ? Math.round(total/targetAmt*1000)/10 : null;
