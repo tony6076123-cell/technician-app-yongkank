@@ -232,24 +232,24 @@ let openCat = null;
 
 const curMonth = () => new Date().toISOString().slice(0,7);
 
-// 🦞 與 技師業績.html 的 sumMonthToDate 同一套口徑：本月 = 加總當月每日快照
+// 🦞 205/1G0 report本身就是「當月1號~匯出當天」累計數字，取最新一筆快照即為本月累計，不能加總多筆快照（會重複計算）
 function monthlySums(perf){
   const cm = curMonth();
   const map = new Map();
   (perf||[]).forEach(r => {
     if (!r.period_end || !r.period_end.startsWith(cm)) return;
     const key = r.location + '|' + r.role + '|' + r.employee;
-    if (!map.has(key)) map.set(key, { key, employee:r.employee, role:r.role, location:r.location, dept:r.dept,
-      order_count:0, hours:0, labor_amt:0, parts_amt:0, outsourced_amt:0, untaxed_amt:0, lastDay:'' });
-    const s = map.get(key);
-    s.order_count += r.order_count||0; s.hours += r.hours||0;
-    s.labor_amt += r.labor_amt||0; s.parts_amt += r.parts_amt||0;
-    s.outsourced_amt += r.outsourced_amt||0; s.untaxed_amt += r.untaxed_amt||0;
-    if (r.period_end > s.lastDay) { s.lastDay = r.period_end; s.dept = r.dept; }
+    const cur = map.get(key);
+    if (!cur || r.period_end > cur.lastDay) {
+      map.set(key, { key, employee:r.employee, role:r.role, location:r.location, dept:r.dept,
+        order_count:r.order_count||0, hours:r.hours||0, labor_amt:r.labor_amt||0, parts_amt:r.parts_amt||0,
+        outsourced_amt:r.outsourced_amt||0, untaxed_amt:r.untaxed_amt||0, lastDay:r.period_end });
+    }
   });
   return [...map.values()];
 }
 
+// 某廠當月逐日全廠業績（date → 當日全廠未稅合計）
 function plantDaily(loc){
   const cm = curMonth();
   const byDay = new Map();
@@ -297,6 +297,7 @@ function partsItems(employee, location){
 
 function medal(i){ return i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1); }
 
+/* ===== 首頁 ===== */
 function goHome(){
   curLoc = null; openKey = null; openCat = null;
   el('backBtn').textContent = '‹ 回主選單';
@@ -324,6 +325,7 @@ function goHome(){
   }).join('');
 }
 
+/* ===== 廠內頁 ===== */
 function openPlant(loc){
   curLoc = loc; openKey = null; openCat = null;
   el('backBtn').textContent = '‹ 回廠區總覽';
@@ -345,6 +347,7 @@ function render(){
     <div class="kpi"><div class="label">資料截至</div><div class="value" style="font-size:17px">${st.lastDay || '—'}</div></div>
   `;
 
+  // 每日達成率
   const days = plantDaily(curLoc);
   let rateHTML = `<h2>📈 每日達成率 <span class="count">當日業績／累計達成率</span></h2>`;
   if (!st.targetAmt){
@@ -381,11 +384,13 @@ function render(){
   renderBoard('boardAdv', '🤝 接待專員排行', adv);
 }
 
+// 🦞 返回鍵：廠內頁→廠區總覽；廠區總覽→App主選單
 function goBack(){
   if (curLoc !== null){ goHome(); }
   else { window.location.href = '/'; }
 }
 
+// 🦞 設定/修改月目標：彈出視窗輸入（不用 prompt，部分手機瀏覽器會擋 prompt）
 let tgLoc = null;
 function setTarget(loc){
   tgLoc = loc;
@@ -515,9 +520,9 @@ function renderBoard(elId, title, rows){
   `;
 }
 
-// 🦞 免費雲端主機休眠喚醒約需50-60秒，重試時長涵蓋完整喚醒時間
+// 🦞 免費雲端主機休眠喚醒約需50-60秒，第一次抓資料失敗就自動重試，重試時長涵蓋完整喚醒時間
 async function init(){
-  const MAX_TRY = 12;
+  const MAX_TRY = 12;   // 12次 × 6秒 ≈ 72秒，足夠涵蓋主機喚醒
   el('loading').innerHTML = '📊 資料載入中…<br><span style="font-size:12px;opacity:.7">首次開啟需喚醒伺服器，約需 1 分鐘，請稍候</span>';
   for (let i = 1; i <= MAX_TRY; i++){
     try{
