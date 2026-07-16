@@ -256,22 +256,48 @@ function parse1G0_1Buffer(buf, filename) {
   if (sepIdx < 0) return [];
   const header = rows[sepIdx + 2] || [];
   const idx = {
-    tech: header.indexOf('承修技師'), cat: header.indexOf('類別'),
+    tech: header.indexOf('承修技師'), reception: header.indexOf('接待專員'),
+    cat: header.indexOf('類別'),
     partNo: header.indexOf('項目'), desc: header.indexOf('說明'),
     qty: header.indexOf('數量'), amt: header.indexOf('金額'),
   };
   if (idx.tech < 0 || idx.amt < 0) return [];
 
-  const agg = new Map();
+  // 同一份 技師版 1G0_1 檔案裡，承修技師欄和接待專員欄同時存在（同一批工單只是欄位順序不同），
+  // 所以技師和接待的零件業績可以從同一個檔案一次算出來，不用再另外寄接待版檔案。
+  function parseEmp(raw) {
+    const s = (raw || '').toString().trim();
+    if (!s) return null;
+    const m = s.match(/^(.+?)\((\w+)\)$/);
+    return { name: m ? m[1].trim() : s, code: m ? m[2] : '' };
+  }
+  function ensure(agg, name, code) {
+    if (!agg.has(name)) agg.set(name, { tire_units: 0, tire_amt: 0, battery_units: 0, battery_amt: 0, chemical_units: 0, chemical_amt: 0, labor_amt: 0, parts_total_amt: 0, items: new Map(), employee_code: code });
+    return agg.get(name);
+  }
+  function applyPart(a, partNo, desc, qty, amt) {
+    const itemKey = partNo + '|' + desc;
+    if (!a.items.has(itemKey)) a.items.set(itemKey, { partNo, desc, qty: 0, amt: 0 });
+    const item = a.items.get(itemKey);
+    item.qty += qty; item.amt += amt;
+    a.parts_total_amt += amt;
+    let pcat = '';
+    if (desc.includes('輪胎')) pcat = 'tire';
+    else if (desc.includes('電瓶')) pcat = 'battery';
+    else if (partNo.startsWith('08C')) pcat = 'chemical';
+    else return;
+    if (pcat === 'tire') { a.tire_units += qty; a.tire_amt += amt; }
+    else if (pcat === 'battery') { a.battery_units += qty; a.battery_amt += amt; }
+    else { a.chemical_units += qty; a.chemical_amt += amt; }
+  }
+
+  const aggTech = new Map();
+  const aggReception = new Map();
   for (let i = sepIdx + 3; i < rows.length; i++) {
     const r = rows[i] || [];
-    const techRaw = (r[idx.tech] || '').toString().trim();
-    if (!techRaw) continue;
-    const m = techRaw.match(/^(.+?)\((\w+)\)$/);
-    const tech = m ? m[1].trim() : techRaw;
-    const techCode = m ? m[2] : '';
-    if (!agg.has(tech)) agg.set(tech, { tire_units: 0, tire_amt: 0, battery_units: 0, battery_amt: 0, chemical_units: 0, chemical_amt: 0, labor_amt: 0, parts_total_amt: 0, items: new Map(), employee_code: techCode });
-    const a = agg.get(tech);
+    const tech = parseEmp(r[idx.tech]);
+    if (!tech) continue;
+    const a = ensure(aggTech, tech.name, tech.code);
     const cat = (r[idx.cat] || '').toString();
     const qty = _num(r[idx.qty]);
     const amt = _num(r[idx.amt]);
@@ -279,25 +305,19 @@ function parse1G0_1Buffer(buf, filename) {
     if (cat !== '零件') continue;
     const partNo = (r[idx.partNo] || '').toString().trim();
     const desc = (r[idx.desc] || '').toString();
+    applyPart(a, partNo, desc, qty, amt);
 
-    const itemKey = partNo + '|' + desc;
-    if (!a.items.has(itemKey)) a.items.set(itemKey, { partNo, desc, qty: 0, amt: 0 });
-    const item = a.items.get(itemKey);
-    item.qty += qty; item.amt += amt;
-    a.parts_total_amt += amt;
-
-    let pcat = '';
-    if (desc.includes('輪胎')) pcat = 'tire';
-    else if (desc.includes('電瓶')) pcat = 'battery';
-    else if (partNo.startsWith('08C')) pcat = 'chemical';
-    else continue;
-    if (pcat === 'tire') { a.tire_units += qty; a.tire_amt += amt; }
-    else if (pcat === 'battery') { a.battery_units += qty; a.battery_amt += amt; }
-    else { a.chemical_units += qty; a.chemical_amt += amt; }
+    if (idx.reception >= 0) {
+      const rec = parseEmp(r[idx.reception]);
+      if (rec) {
+        const b = ensure(aggReception, rec.name, rec.code);
+        applyPart(b, partNo, desc, qty, amt);
+      }
+    }
   }
 
   const out = [];
-  for (const [tech, a] of agg) {
+  for (const [tech, a] of aggTech) {
     const items = [...a.items.values()].sort((x, y) => y.amt - x.amt);
     const { items: _drop, ...rest } = a;
     out.push({
@@ -305,6 +325,17 @@ function parse1G0_1Buffer(buf, filename) {
       ...rest,
       items_json: JSON.stringify(items),
       id: `${location}_技師_${tech}_${period_end}_parts`,
+      _collection: 'technician_parts_summary'
+    });
+  }
+  for (const [rec, a] of aggReception) {
+    const items = [...a.items.values()].sort((x, y) => y.amt - x.amt);
+    const { items: _drop, ...rest } = a;
+    out.push({
+      location, employee: rec, period_end,
+      ...rest,
+      items_json: JSON.stringify(items),
+      id: `${location}_接待_${rec}_${period_end}_parts`,
       _collection: 'technician_parts_summary'
     });
   }
