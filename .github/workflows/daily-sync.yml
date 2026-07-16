@@ -1,0 +1,17 @@
+name: Daily Gmail Sync
+
+on:
+  schedule:
+    - cron: '0 1 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wake server
+        run: curl -s https://yongkang-tech-app.onrender.com/ || true
+      - name: Wait for wake-up
+        run: sleep 60
+      - name: Trigger sync
+        run: curl -s -X POST https://yongkang-tech-app.onrender.com/api/sync-now
