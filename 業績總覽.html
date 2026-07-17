@@ -278,9 +278,12 @@ function plantStats(loc){
 
 function dailyRows(employee, role, location){
   const cm = curMonth();
-  return (DATA.performance||[]).filter(p => p.employee===employee && p.role===role && p.location===location
+  const rows = (DATA.performance||[]).filter(p => p.employee===employee && p.role===role && p.location===location
       && p.period_end && p.period_end.startsWith(cm))
     .sort((a,b)=>a.period_end.localeCompare(b.period_end));
+  // 🦞 跟 plantDaily 同一個問題：每天重新匯出的205/1G0是月累計快照，只保留最新一筆，
+  // 不要把07-07這種舊快照當獨立橫條顯示（否則每人明細也會冒出重複/過期的橫條）
+  return rows.length ? [rows[rows.length-1]] : [];
 }
 
 function partsItems(employee, location){
