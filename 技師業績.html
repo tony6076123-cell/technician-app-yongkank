@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>技師 / 接待專員業績查詢</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy: #16233d;
+    --navy-2: #1f3054;
+    --paper: #f3f0e8;
+    --paper-2: #ffffff;
+    --ink: #16233d;
+    --ink-soft: #5c6a86;
+    --line: #d8d2c2;
+    --amber: #d98a2b;
+    --amber-deep: #b96f18;
+    --red: #b5432f;
+    --green: #3a7d5c;
+    --radius: 14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Noto Sans TC', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height:100vh;
+  }
+  .mono{ font-family:'Roboto Mono', monospace; font-variant-numeric: tabular-nums; }
+
+  /* ---- login ---- */
+  #loginView{ display:flex; flex-direction:column; justify-content:center; min-height:100vh; padding: 32px 28px; max-width:480px; margin:0 auto; }
+  #loginView .brand{ font-size:12px; letter-spacing:.14em; opacity:.6; text-transform:uppercase; font-family:'Roboto Mono',monospace; color:var(--navy); }
+  #loginView h1{ font-size:24px; font-weight:900; margin:6px 0 4px; }
+  #loginView p.hint{ color:var(--ink-soft); font-size:13px; margin:0 0 28px; }
+  .field{ margin-bottom:16px; }
+  .field label{ display:block; font-size:13px; color:var(--ink-soft); margin-bottom:6px; }
+  .field input{ width:100%; padding:12px 14px; font-size:16px; border:1px solid var(--line); border-radius:10px; background:var(--paper-2); color:var(--ink); }
+  .btn-primary{ width:100%; padding:13px; font-size:16px; font-weight:700; color:#fff; background:var(--navy); border:none; border-radius:10px; cursor:pointer; }
+  .btn-primary:active{ opacity:.85; }
+  #loginErr{ color:var(--red); font-size:13px; margin-top:12px; min-height:18px; }
+
+  /* ---- topbar ---- */
+  .topbar{
+    background: var(--navy); color:#f3f0e8;
+    padding: 18px 18px 22px; position: sticky; top:0; z-index:20;
+    box-shadow: 0 4px 14px rgba(22,35,61,0.25);
+  }
+  .topbar .brand{ font-size:12px; letter-spacing:.14em; opacity:.65; text-transform:uppercase; font-family:'Roboto Mono',monospace; }
+  .topbar h1{ margin:4px 0 0; font-size:22px; font-weight:900; letter-spacing:.02em; }
+  .topbar .sub{ margin-top:6px; font-size:12px; opacity:.7; }
+  .topbar-top{ display:flex; justify-content:space-between; align-items:flex-start; }
+  .back-row{ display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .back-btn{ background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.25); color:#f3f0e8; border-radius:999px; padding:6px 14px; font-size:13px; cursor:pointer; white-space:nowrap; }
+  .back-btn:active{ background:rgba(255,255,255,0.22); }
+
+  main{ max-width:520px; margin:0 auto; padding:18px 16px 60px; }
+
+  /* ---- factory picker ---- */
+  .factory-grid{ display:grid; grid-template-columns:1fr; gap:14px; margin-top:6px; }
+  .factory-card{ background:var(--paper-2); border:1px solid var(--line); border-radius:var(--radius); padding:22px 20px; display:flex; align-items:center; justify-content:space-between; cursor:pointer; }
+  .factory-card:active{ transform:scale(0.98); }
+  .factory-card .name{ font-size:19px; font-weight:700; }
+  .factory-card .meta{ font-size:12px; color:var(--ink-soft); margin-top:4px; }
+  .factory-card .arrow{ font-size:22px; color:var(--amber-deep); }
+  .factory-card.disabled{ opacity:.55; }
+
+  .section-label{ font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); font-family:'Roboto Mono',monospace; margin:22px 0 10px; }
+
+  /* ---- role tabs / dept grid ---- */
+  .role-tabs{ display:flex; gap:8px; margin-bottom:18px; }
+  .role-tab{ flex:1; text-align:center; padding:10px 0; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; border:1px solid var(--line); background:var(--paper-2); color:var(--ink-soft); }
+  .role-tab.active{ background:var(--amber); color:#fff; border-color:var(--amber); }
+  .dept-block{ margin-bottom:20px; }
+  .dept-title{ font-size:14px; font-weight:700; margin-bottom:8px; color:var(--navy-2); }
+  .emp-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+  .emp-card{ background:var(--paper-2); border:1px solid var(--line); border-radius:10px; padding:12px 12px 10px; cursor:pointer; position:relative; overflow:hidden; }
+  .emp-card::before{ content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--amber); }
+  .emp-card:active{ background:#ece7d8; }
+  .emp-card .ename{ font-size:15px; font-weight:700; }
+  .emp-card .etotal{ font-size:13px; margin-top:4px; color:var(--ink-soft); }
+  .emp-card .etotal b{ color:var(--navy); font-family:'Roboto Mono',monospace; }
+
+  /* ---- empty ---- */
+  .empty{ border:1px dashed var(--line); border-radius:var(--radius); padding:30px 18px; text-align:center; color:var(--ink-soft); font-size:13px; line-height:1.7; }
+  .empty .big{ font-size:30px; margin-bottom:6px; }
+
+  /* ---- detail page ---- */
+  .emp-header{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:4px; }
+  .emp-header .who{ font-size:24px; font-weight:900; }
+  .emp-header .dept-tag{ font-size:11px; background:rgba(217,138,43,0.15); color:var(--amber-deep); padding:3px 9px; border-radius:999px; font-weight:700; white-space:nowrap; }
+  .period-note{ font-size:12px; color:var(--ink-soft); margin-bottom:16px; }
+
+  .tabs{ display:flex; gap:8px; margin-bottom:16px; }
+  .tab{ flex:1; text-align:center; padding:9px 0; border-radius:999px; font-size:13px; font-weight:700; cursor:pointer; border:1px solid var(--line); background:var(--paper-2); color:var(--ink-soft); }
+  .tab.active{ background:var(--navy); color:#f3f0e8; border-color:var(--navy); }
+
+  .stat-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+  .stat-card{ background:var(--paper-2); border:1px solid var(--line); border-radius:var(--radius); padding:14px 14px 12px; }
+  .stat-card .label{ font-size:12px; color:var(--ink-soft); margin-bottom:6px; }
+  .stat-card .value{ font-size:21px; font-weight:900; font-family:'Roboto Mono',monospace; color:var(--navy); }
+  .stat-card .value small{ font-size:12px; font-weight:400; color:var(--ink-soft); margin-left:2px; }
+  .stat-card.wide{ grid-column:1/-1; }
+
+  .yoy-row{ display:flex; align-items:center; gap:6px; margin-top:8px; font-size:12px; }
+  .yoy-pill{ padding:2px 8px; border-radius:999px; font-weight:700; font-family:'Roboto Mono',monospace; }
+  .yoy-up{ background:rgba(58,125,92,0.14); color:var(--green); }
+  .yoy-down{ background:rgba(181,67,47,0.12); color:var(--red); }
+  .yoy-note{ color:var(--ink-soft); }
+
+  table.parts{ width:100%; border-collapse:collapse; margin-top:4px; }
+  .chart-card{ margin-top:2px; }
+  .chart-title{ font-size:13px; font-weight:700; margin-bottom:10px; color:var(--navy-2); }
+  .chart-row{ display:flex; align-items:center; gap:8px; margin-bottom:9px; }
+  .chart-label{ width:96px; flex-shrink:0; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--ink); }
+  .chart-bar-wrap{ flex:1; background:#ece7d8; border-radius:6px; height:18px; position:relative; overflow:hidden; }
+  .chart-bar{ height:100%; border-radius:6px; background:var(--amber); transition:width .4s ease; }
+  .chart-bar.ly{ background:#9aa6bb; }
+  .chart-value{ width:112px; text-align:right; font-size:12px; font-weight:700; flex-shrink:0; font-family:'Roboto Mono',monospace; color:var(--navy); }
+  .chart-value .qty{ font-weight:400; color:var(--ink-soft); margin-left:4px; }
+  .chart-legend{ display:flex; gap:16px; font-size:11px; color:var(--ink-soft); margin-bottom:10px; }
+  .legend-dot{ display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:5px; vertical-align:middle; }
+
+  .progress-track{ height:12px; border-radius:6px; overflow:hidden; background:#ece7d8; }
+  .progress-fill{ height:100%; border-radius:6px 0 0 6px; background:var(--amber); }
+  .progress-text{ display:flex; justify-content:space-between; font-size:12px; color:var(--ink-soft); margin-top:6px; }
+
+  table.parts th{ text-align:left; font-size:11px; color:var(--ink-soft); font-weight:500; border-bottom:1px solid var(--line); padding:6px 4px; }
+  table.parts td{ font-size:13px; padding:9px 4px; border-bottom:1px solid #ece7d8; }
+  table.parts td.num{ text-align:right; font-family:'Roboto Mono',monospace; }
+  table.parts tr:last-child td{ border-bottom:none; }
+  .part-name{ font-weight:700; }
+  .part-code{ font-size:11px; color:var(--ink-soft); }
+
+  .hidden{ display:none !important; }
+</style>
+</head>
+<body>
+
+<!-- 登入畫面 -->
+<div id="loginView">
+  <div class="brand">巧克力汽車 · 服務廠業績系統</div>
+  <h1>技師 / 接待專員業績查詢</h1>
+  <p class="hint">輸入工號登入查看業績</p>
+  <div class="field"><label>工號</label><input id="loginCode" type="text" inputmode="numeric" placeholder="例如 738980" autocomplete="off"></div>
+  <button class="btn-primary" onclick="doLogin()">登入</button>
+  <div id="loginErr"></div>
+</div>
+
+<!-- 主畫面 -->
+<div id="appView" style="display:none">
+  <div class="topbar">
+    <div class="back-row hidden" id="backRow"><button class="back-btn" onclick="goBack()">← 返回</button></div>
+    <div class="topbar-top">
+      <div>
+        <div class="brand">巧克力汽車 · 服務廠業績系統</div>
+        <h1 id="pageTitle">—</h1>
+        <div class="sub" id="pageSub">—</div>
+      </div>
+      <button class="back-btn" onclick="logout()">登出</button>
+    </div>
+  </div>
+
+  <main>
+    <div id="screen-factory" class="hidden">
+      <div class="factory-grid" id="factoryGrid"></div>
+    </div>
+
+    <div id="screen-employees" class="hidden">
+      <div class="role-tabs" id="roleTabs">
+        <div class="role-tab active" id="roleTech" onclick="switchRole('技師')">承修技師</div>
+        <div class="role-tab" id="roleAdvisor" onclick="switchRole('接待')">接待專員</div>
+      </div>
+      <div id="empListArea"></div>
+    </div>
+
+    <div id="screen-detail" class="hidden">
+      <div class="emp-header"><div class="who" id="detName">—</div><div class="dept-tag" id="detDept">—</div></div>
+      <div class="period-note" id="detPeriod">—</div>
+
+      <div class="tabs">
+        <div class="tab active" id="tabOverview" onclick="switchTab('overview')">業績總覽</div>
+        <div class="tab" id="tabDaily" onclick="switchTab('daily')">每日業績</div>
+        <div class="tab" id="tabParts" onclick="switchTab('parts')">零件明細</div>
+      </div>
+
+      <div id="paneOverview">
+        <div class="stat-grid" id="statGrid"></div>
+        <div class="chart-card" style="margin-bottom:16px;">
+          <div class="chart-title">業績組成（工資 / 零件 / 外修）</div>
+          <div id="overviewChart"></div>
+        </div>
+        <div class="stat-card wide">
+          <div class="label">去年同期比較</div>
+          <div class="value" id="statYoyValue">—</div>
+          <div class="yoy-row"><span class="yoy-pill" id="yoyPill">—</span><span class="yoy-note">vs 去年同期</span></div>
+          <div class="chart-legend" style="margin-top:14px;"><span><span class="legend-dot" style="background:var(--amber);"></span>今年本期</span><span><span class="legend-dot" style="background:#9aa6bb;"></span>去年同期</span></div>
+          <div id="yoyChart"></div>
+        </div>
+      </div>
+
+      <div id="paneDailyWrap" class="hidden">
+        <div class="chart-card">
+          <div class="chart-title">每日業績（本月至今，依日期排序）</div>
+          <div id="dailyChart"></div>
+        </div>
+        <div id="dailyEmpty" class="empty hidden" style="margin-top:14px;"><div class="big">📄</div>本月目前還沒有每日匯入紀錄。</div>
+      </div>
+
+      <div id="panePartsWrap" class="hidden">
+        <div class="stat-card" style="margin-bottom:16px;">
+          <div class="label">零件金額合計</div>
+          <div class="value" id="partsTotalValue">—</div>
+        </div>
+
+        <div class="chart-card" style="margin-bottom:16px;">
+          <div class="chart-title">零件業績排行（金額）</div>
+          <div id="partsChart"></div>
+        </div>
+
+        <div class="chart-card" style="margin-bottom:16px;">
+          <div class="chart-title">零件業績 去年同期比較</div>
+          <div class="chart-legend"><span><span class="legend-dot" style="background:var(--amber);"></span>今年本期</span><span><span class="legend-dot" style="background:#9aa6bb;"></span>去年同期</span></div>
+          <div id="partsYoyChart"></div>
+          <div class="yoy-row" id="partsYoyRow" style="margin-top:2px;"><span class="yoy-pill" id="partsYoyPill">—</span><span class="yoy-note">零件業績 vs 去年同期</span></div>
+        </div>
+
+        <div class="chart-title" style="margin-top:2px">品項明細（僅列示1G0報表中有分類的品項：輪胎／電瓶／化學品，非零件業績全額，加總不會等於上面「零件金額合計」）</div>
+        <table class="parts">
+          <thead><tr><th>項目</th><th style="text-align:right">數量</th><th style="text-align:right">金額</th></tr></thead>
+          <tbody id="partsTbody"></tbody>
+        </table>
+        <div id="partsEmpty" class="empty hidden" style="margin-top:14px;"><div class="big">🔧</div>這期間尚無零件業績資料。<br>不是壞掉——這位同仁這期間可能沒有零件相關工單，或資料還沒匯入。</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+let session = null;
+let nav = { screen:'factory', factory:null, role:'技師' };
+
+function fmt(n){ return (n||0).toLocaleString('zh-TW'); }
+function el(id){ return document.getElementById(id); }
+
+async function doLogin(){
+  const code = el('loginCode').value.trim();
+  const errEl = el('loginErr');
+  errEl.textContent = '';
+  if (!code){ errEl.textContent = '請輸入工號'; return; }
+  try{
+    const r = await fetch('/api/tech-login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ code }) });
+    const j = await r.json();
+    if (!j.ok){ errEl.textContent = j.error || '登入失敗'; return; }
+    localStorage.setItem('tech_code', code);
+    await loadData(code);
+  }catch(e){ errEl.textContent = '連線失敗：' + e.message; }
+}
+
+function logout(){
+  localStorage.removeItem('tech_code');
+  session = null;
+  el('appView').style.display = 'none';
+  el('loginView').style.display = 'flex';
+  el('loginCode').value = '';
+}
+
+async function loadData(code){
+  const r = await fetch('/api/my-performance?code=' + encodeURIComponent(code));
+  const j = await r.json();
+  if (!j.ok){ logout(); return; }
+  session = { code, ...j };
+  el('loginView').style.display = 'none';
+  el('appView').style.display = 'block';
+  if (session.level === 'manager'){
+    el('backRow').classList.add('hidden');
+    renderFactoryPicker();
+  } else {
+    el('backRow').classList.add('hidden');
+    openEmployeeDetail(session.user.location, session.user.role, session.user.name, false);
+  }
+}
+
+// 依 employee+role 分組，取最新 period_end 當作「本期」快照
+function latestByEmployee(list){
+  const map = new Map();
+  (list||[]).forEach(r => {
+    const key = r.employee + '|' + (r.role||'');
+    const cur = map.get(key);
+    if (!cur || r.period_end > cur.period_end) map.set(key, r);
+  });
+  return [...map.values()];
+}
+function lastYearRecord(list, employee){
+  const lastYear = String(new Date().getFullYear() - 1);
+  const rows = (list||[]).filter(p => p.employee === employee && p.period_end && p.period_end.startsWith(lastYear));
+  if (!rows.length) return null;
+  return rows.reduce((a,b) => (b.period_end > a.period_end ? b : a));
+}
+
+// 🦞 2026-07-09起：報表改成「每日獨立匯出」，不再是月累計快照。
+// 本月業績 = 把當月所有日快照加總，不能再用latestByEmployee()當「最新=累計」。
+// 🦞 205/1G0 report本身就是「當月1號~匯出當天」累計數字，取最新一筆快照即為本月累計，不能加總多筆快照（會重複計算）
+function sumMonthToDate(list, employee, role){
+  const curMonth = new Date().toISOString().slice(0,7);
+  const rows = (list||[]).filter(p => p.employee===employee && p.role===role && p.period_end && p.period_end.startsWith(curMonth));
+  if (!rows.length) return null;
+  const latest = rows.slice().sort((a,b)=>a.period_end.localeCompare(b.period_end)).pop();
+  return { employee, role, location: latest.location, dept: latest.dept,
+    order_count: latest.order_count||0, car_count: latest.car_count||0, hours: latest.hours||0,
+    labor_amt: latest.labor_amt||0, parts_amt: latest.parts_amt||0, outsourced_amt: latest.outsourced_amt||0,
+    untaxed_amt: latest.untaxed_amt||0, total_amt: latest.total_amt||0,
+    period_start: latest.period_start, period_end: latest.period_end };
+}
+
+function sumPartsMonthToDate(list, employee){
+  const curMonth = new Date().toISOString().slice(0,7);
+  const rows = (list||[]).filter(p => p.employee===employee && p.period_end && p.period_end.startsWith(curMonth));
+  if (!rows.length) return null;
+  const latest = rows.slice().sort((a,b)=>a.period_end.localeCompare(b.period_end)).pop();
+  const sum = { employee, location: latest.location, tire_units: latest.tire_units||0, tire_amt: latest.tire_amt||0,
+    battery_units: latest.battery_units||0, battery_amt: latest.battery_amt||0,
+    chemical_units: latest.chemical_units||0, chemical_amt: latest.chemical_amt||0,
+    labor_amt: latest.labor_amt||0, parts_total_amt: latest.parts_total_amt||0 };
+  sum.items_json = latest.items_json || '[]';
+  return sum;
+}
+
+// 某員工當月每一筆日快照，依日期排序（每日業績分頁直接用，不用再反推delta）
+function dailyRecords(list, employee, role){
+  const curMonth = new Date().toISOString().slice(0,7);
+  return (list||[]).filter(p => p.employee===employee && p.role===role && p.period_end && p.period_end.startsWith(curMonth))
+    .sort((a,b)=>a.period_end.localeCompare(b.period_end));
+}
+
+// ========== 管理層：選廠 ==========
+function renderFactoryPicker(){
+  nav.screen = 'factory';
+  el('pageTitle').textContent = '選擇服務廠';
+  el('pageSub').textContent = '技師 / 接待專員業績查詢';
+  el('backRow').classList.add('hidden');
+  showScreen('screen-factory');
+
+  const perf = latestByEmployee(session.performance);
+  const grid = el('factoryGrid');
+  grid.innerHTML = ['永康','歸仁'].map(loc => {
+    const techN = perf.filter(p=>p.location===loc && p.role==='技師').length;
+    const advN = perf.filter(p=>p.location===loc && p.role==='接待').length;
+    const hasData = techN + advN > 0;
+    return `<div class="factory-card ${hasData?'':'disabled'}" onclick="${hasData?`openFactory('${loc}')`:''}">
+      <div><div class="name">${loc}廠</div><div class="meta">${hasData ? `${techN} 位承修技師 ／ ${advN} 位接待專員` : '尚未上傳報表'}</div></div>
+      <div class="arrow">›</div>
+    </div>`;
+  }).join('');
+}
+
+// ========== 管理層：選人 ==========
+function openFactory(loc){
+  nav.screen = 'employees'; nav.factory = loc; nav.role = '技師';
+  el('pageTitle').textContent = loc + '廠';
+  el('pageSub').textContent = '點選姓名查看個人業績';
+  el('backRow').classList.remove('hidden');
+  showScreen('screen-employees');
+  el('roleTech').classList.add('active'); el('roleAdvisor').classList.remove('active');
+  renderEmployeeList();
+}
+function switchRole(role){
+  nav.role = role;
+  el('roleTech').classList.toggle('active', role==='技師');
+  el('roleAdvisor').classList.toggle('active', role==='接待');
+  renderEmployeeList();
+}
+function renderEmployeeList(){
+  const names = new Set(session.performance.filter(p => p.location===nav.factory && p.role===nav.role).map(p=>p.employee));
+  const perf = [...names].map(n => sumMonthToDate(session.performance, n, nav.role)).filter(Boolean);
+  const area = el('empListArea');
+  if (!perf.length){ area.innerHTML = `<div class="empty"><div class="big">📄</div>尚無${nav.role==='技師'?'承修技師':'接待專員'}資料</div>`; return; }
+
+  if (nav.role === '接待'){
+    area.innerHTML = `<div class="dept-block"><div class="dept-title">接待專員</div><div class="emp-grid">` +
+      perf.sort((a,b)=>b.untaxed_amt-a.untaxed_amt).map(p => `
+        <div class="emp-card" onclick="openEmployeeDetail('${nav.factory}','${nav.role}','${p.employee}', true)">
+          <div class="ename">${p.employee}</div>
+          <div class="etotal">本期 <b class="mono">$${fmt(p.untaxed_amt)}</b></div>
+        </div>`).join('') + `</div></div>`;
+    return;
+  }
+  const byDept = new Map();
+  perf.forEach(p => { const d = p.dept || '未分類'; if (!byDept.has(d)) byDept.set(d, []); byDept.get(d).push(p); });
+  area.innerHTML = [...byDept.entries()].map(([dept, list]) => `
+    <div class="dept-block"><div class="dept-title">${dept}</div><div class="emp-grid">` +
+      list.sort((a,b)=>b.untaxed_amt-a.untaxed_amt).map(p => `
+        <div class="emp-card" onclick="openEmployeeDetail('${nav.factory}','${nav.role}','${p.employee}', true)">
+          <div class="ename">${p.employee}</div>
+          <div class="etotal">本期 <b class="mono">$${fmt(p.untaxed_amt)}</b></div>
+        </div>`).join('') + `</div></div>`).join('');
+}
+
+// ========== 個人明細（staff直接看自己 / manager點進來看）==========
+function openEmployeeDetail(loc, role, employeeName, fromManagerNav){
+  nav.screen = 'detail'; nav.factory = loc; nav.role = role; nav.employee = employeeName;
+  el('backRow').classList.toggle('hidden', !fromManagerNav);
+  showScreen('screen-detail');
+
+  const p = sumMonthToDate(session.performance, employeeName, role);
+  el('pageTitle').textContent = employeeName;
+  el('pageSub').textContent = p ? (p.dept||role) : role;
+  el('detName').textContent = employeeName;
+  el('detDept').textContent = p ? (p.dept||role) : role;
+
+  if (!p){
+    el('detPeriod').textContent = '尚無業績資料';
+    el('statGrid').innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="big">📄</div>這期間尚無這位同仁的業績資料。</div>`;
+    el('overviewChart').innerHTML = ''; el('yoyChart').innerHTML = '';
+    el('statYoyValue').textContent = '—'; el('yoyPill').textContent='—'; el('yoyPill').className='yoy-pill';
+    renderPartsTab(null, null, employeeName);
+    renderDailyTab([]);
+    switchTab('overview');
+    return;
+  }
+
+  el('detPeriod').textContent = `本月累計：${p.period_start} ～ ${p.period_end}`;
+
+  const target = (session.targets||[]).find(t => t.location === loc);
+  const partsRec = sumPartsMonthToDate(session.parts, employeeName);
+
+  let statHtml = `
+    <div class="stat-card"><div class="label">本期累計業績</div><div class="value">$${fmt(p.untaxed_amt)}</div></div>
+    <div class="stat-card"><div class="label">本期零件業績</div><div class="value">$${fmt(p.parts_amt)}</div></div>
+    <div class="stat-card"><div class="label">工單數</div><div class="value">${fmt(p.order_count)}<small>單</small></div></div>
+    <div class="stat-card"><div class="label">車輛數</div><div class="value">${fmt(p.car_count)}<small>台</small></div></div>
+    <div class="stat-card"><div class="label">工時</div><div class="value">${p.hours||0}<small>Hr</small></div></div>
+  `;
+  // 🦞 個人達成率要用「技師個人月目標」，不能拿個人業績去除以全廠目標（那會變成個位數百分比，完全失真）
+  const perTarget = target ? (target.target_per_tech || 0) : 0;
+  if (perTarget){
+    const rawPct = Math.round((p.untaxed_amt/perTarget)*100);
+    const bar = Math.min(100, rawPct);
+    statHtml += `<div class="stat-card"><div class="label">月目標達成<small style="font-weight:400;color:var(--ink-soft)">（目標 $${fmt(perTarget)}）</small></div><div class="value">${rawPct}<small>%</small></div>
+      <div class="progress-track" style="margin-top:8px"><div class="progress-fill" style="width:${bar}%"></div></div></div>`;
+  } else {
+    statHtml += `<div class="stat-card"><div class="label">月目標</div><div class="value" style="font-size:13px;color:var(--ink-soft);font-weight:400">尚未設定</div></div>`;
+  }
+  el('statGrid').innerHTML = statHtml;
+
+  renderChartRows('overviewChart', [
+    { label:'工資', value:p.labor_amt||0 },
+    { label:'零件', value:p.parts_amt||0 },
+    ...(p.outsourced_amt ? [{ label:'外修', value:p.outsourced_amt }] : [])
+  ]);
+
+  const ly = lastYearRecord(session.performance, employeeName);
+  if (ly){
+    const diff = p.untaxed_amt - ly.untaxed_amt;
+    const pct = ly.untaxed_amt ? Math.round(diff/ly.untaxed_amt*100) : 0;
+    el('statYoyValue').innerHTML = `去年同期 $${fmt(ly.untaxed_amt)}<small>元</small>`;
+    const pill = el('yoyPill');
+    pill.textContent = (pct>=0?'▲ +':'▼ ') + pct + '%';
+    pill.className = 'yoy-pill ' + (pct>=0?'yoy-up':'yoy-down');
+    renderChartRows('yoyChart', [ { label:'今年本期', value:p.untaxed_amt }, { label:'去年同期', value:ly.untaxed_amt, ly:true } ]);
+  } else {
+    el('statYoyValue').textContent = '去年同期無資料可比對';
+    el('yoyPill').textContent = '—'; el('yoyPill').className = 'yoy-pill';
+    el('yoyChart').innerHTML = '';
+  }
+
+  renderPartsTab(p, partsRec, employeeName);
+  renderDailyTab(dailyRecords(session.performance, employeeName, role));
+  switchTab('overview');
+}
+
+// 現在報表本身就是逐日獨立匯出，每日業績直接讀當天數字即可，不用再反推delta
+function renderDailyTab(rows){
+  if (!rows.length){
+    el('dailyChart').innerHTML = '';
+    el('dailyEmpty').classList.remove('hidden');
+    return;
+  }
+  el('dailyEmpty').classList.add('hidden');
+  renderChartRows('dailyChart', rows.map(r => ({ label: r.period_end, value: Math.max(0, r.untaxed_amt) })));
+}
+
+// 🦞 「零件金額合計」統一用205報表的p.parts_amt（會跟業績總覽對得起來），
+// 不用1G0_1的partsRec.parts_total_amt——兩份報表算零件的口徑不同，數字本來就對不齊，
+// 1G0_1只拿來當「品項明細」參考用，不當作官方合計數字。
+function renderPartsTab(p, partsRec, employeeName){
+  const items = partsRec && partsRec.items_json ? JSON.parse(partsRec.items_json) : [];
+  el('partsTotalValue').textContent = '$' + fmt(p ? p.parts_amt : 0);
+
+  if (!items.length){
+    el('partsChart').innerHTML = `<div style="font-size:12px;color:var(--ink-soft)">尚無零件銷售紀錄可繪製圖表</div>`;
+  } else {
+    renderChartRows('partsChart', items.slice(0,6).map(it => ({ label: it.desc, value: it.amt, qty: it.qty })));
+  }
+
+  const lyPerf = lastYearRecord(session.performance, employeeName);
+  if (p && lyPerf){
+    const diff = p.parts_amt - lyPerf.parts_amt;
+    const pct = lyPerf.parts_amt ? Math.round(diff/lyPerf.parts_amt*100) : 0;
+    renderChartRows('partsYoyChart', [ { label:'今年本期', value:p.parts_amt }, { label:'去年同期', value:lyPerf.parts_amt, ly:true } ]);
+    const pill = el('partsYoyPill');
+    pill.textContent = (pct>=0?'▲ +':'▼ ') + pct + '%';
+    pill.className = 'yoy-pill ' + (pct>=0?'yoy-up':'yoy-down');
+    el('partsYoyRow').classList.remove('hidden');
+  } else {
+    el('partsYoyChart').innerHTML = `<div style="font-size:12px;color:var(--ink-soft)">去年同期無資料可比對</div>`;
+    el('partsYoyRow').classList.add('hidden');
+  }
+
+  const tbody = el('partsTbody');
+  if (!items.length){
+    tbody.innerHTML = '';
+    el('partsEmpty').classList.remove('hidden');
+  } else {
+    el('partsEmpty').classList.add('hidden');
+    tbody.innerHTML = items.map(it => `
+      <tr><td><div class="part-name">${it.desc||'(未命名品項)'}</div><div class="part-code">${it.partNo||''}</div></td>
+      <td class="num">${it.qty}</td><td class="num">$${fmt(it.amt)}</td></tr>`).join('');
+  }
+}
+
+// 通用水平長條圖列（chart-row / chart-bar），value在條末端，ly=true走去年同期灰色樣式
+function renderChartRows(containerId, rows){
+  const valid = rows.filter(r => r.value > 0);
+  if (!valid.length){ el(containerId).innerHTML = `<div style="font-size:12px;color:var(--ink-soft)">尚無資料</div>`; return; }
+  const max = Math.max(...valid.map(r=>r.value), 1);
+  el(containerId).innerHTML = valid.map(r => `
+    <div class="chart-row">
+      <div class="chart-label" title="${r.label}">${r.label}</div>
+      <div class="chart-bar-wrap"><div class="chart-bar ${r.ly?'ly':''}" style="width:${Math.max(4, r.value/max*100)}%"></div></div>
+      <div class="chart-value">$${fmt(r.value)}${r.qty!=null?`<span class="qty">×${r.qty}</span>`:''}</div>
+    </div>`).join('');
+}
+
+function switchTab(tab){
+  el('tabOverview').classList.toggle('active', tab==='overview');
+  el('tabDaily').classList.toggle('active', tab==='daily');
+  el('tabParts').classList.toggle('active', tab==='parts');
+  el('paneOverview').classList.toggle('hidden', tab!=='overview');
+  el('paneDailyWrap').classList.toggle('hidden', tab!=='daily');
+  el('panePartsWrap').classList.toggle('hidden', tab!=='parts');
+}
+
+function showScreen(id){
+  ['screen-factory','screen-employees','screen-detail'].forEach(s => el(s).classList.toggle('hidden', s!==id));
+}
+
+function goBack(){
+  if (session.level !== 'manager') return;
+  if (nav.screen === 'detail'){ openFactory(nav.factory); return; }
+  if (nav.screen === 'employees'){ renderFactoryPicker(); return; }
+}
+
+// 🦞 測試期先跳過登入畫面，直接看全部人員（2026-07-09 海哥交代）。
+// 正式上線前要把這段拿掉，改回真的要求登入。
+const TEST_MODE_AUTO_CODE = 'mgr_gm';
+
+(function init(){
+  const saved = localStorage.getItem('tech_code') || TEST_MODE_AUTO_CODE;
+  loadData(saved).catch(logout);
+})();
+</script>
+</body>
+</html>
+
