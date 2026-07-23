@@ -100,6 +100,464 @@
 
 <div class="topbar">
   <button class="back-btn" id="backBtn" onclick="goBack()">‹ 回主選單</button>
+  <h1 id="pageTitle">月度業績檢討</h1>
+  <div class="sub" id="subTitle">管理層專用</div>
+</div>
+
+<div class="wrap">
+  <!-- 🔒 密碼鎖：限總經理/服務經理/永康廠長/歸仁廠長/特助（測試版共用密碼，正式版改個人密碼） -->
+  <div id="lockView">
+    <div class="lk">🔒</div>
+    <h2>管理層專用頁面</h2>
+    <p>本頁僅限：總經理・服務經理・永康廠長・歸仁廠長・特助<br>請輸入通行密碼</p>
+    <input type="password" id="pwInput" inputmode="numeric" maxlength="8" placeholder="••••" onkeydown="if(event.key==='Enter')unlock()">
+    <button onclick="unlock()">進入</button>
+    <div id="lockErr"></div>
+  </div>
+
+  <div id="loading" style="display:none">📊 資料載入中，請稍候…</div>
+  <div id="homeView" style="display:none">
+    <div class="home-grid" id="homeGrid"></div>
+    <div class="foot">每人：本期業績、上月同期比、去年同期比、不足項目與改善施策</div>
+  </div>
+  <div id="plantView" style="display:none">
+    <div id="personList"></div>
+    <div class="foot">比較基準＝同期（每月1日～資料截止同一天）｜金額均為未稅業績</div>
+  </div>
+</div>
+
+<script>
+const el = id => document.getElementById(id);
+const fmt = n => Math.round(n||0).toLocaleString('zh-TW');
+const LOCS = ['永康','歸仁'];
+let DATA = null, curLoc = null, openPerson = null;
+
+/* ===== 密碼鎖（共用密碼 0415） ===== */
+const PASS = '0415';
+function unlock(){
+  if (el('pwInput').value === PASS){
+    sessionStorage.setItem('review_ok','1');
+    el('lockView').style.display='none';
+    el('loading').style.display='';
+    init();
+  } else {
+    el('lockErr').textContent = '密碼錯誤，請再試一次';
+    el('pwInput').value=''; el('pwInput').focus();
+  }
+}
+function goBack(){
+  if (curLoc !== null){ goHome(); }       // 廠內頁 → 廠區選擇
+  else { window.location.href = '/'; }    // 廠區選擇 → App 主選單
+}
+
+const curMonth = () => new Date().toISOString().slice(0,7);
+function prevMonth(ym){ const [y,m]=ym.split('-').map(Number); const d=new Date(y, m-2, 1); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function lastYearMonth(ym){ const [y,m]=ym.split('-'); return (Number(y)-1)+'-'+m; }
+
+// 🦞 205/1G0 report本身就是「當月1號~匯出當天」累計數字，取最新一筆快照即為累計金額，不能加總多筆快照（會重複計算）
+function periodSum(employee, role, loc, ym, uptoDay){
+  const rows = (DATA.performance||[]).filter(p => p.employee===employee && p.role===role && p.location===loc
+    && p.period_end && p.period_end.startsWith(ym) && Number(p.period_end.slice(8,10)) <= uptoDay);
+  if (!rows.length) return null;
+  const latest = rows.slice().sort((a,b)=>a.period_end.localeCompare(b.period_end)).pop();
+  return { order_count: latest.order_count||0, labor_amt: latest.labor_amt||0, parts_amt: latest.parts_amt||0,
+    outsourced_amt: latest.outsourced_amt||0, untaxed_amt: latest.untaxed_amt||0 };
+}
+function partsSum(employee, loc, ym, uptoDay){
+  const rows = (DATA.parts||[]).filter(p => p.employee===employee && p.location===loc
+    && p.period_end && p.period_end.startsWith(ym) && Number(p.period_end.slice(8,10)) <= uptoDay);
+  if (!rows.length) return null;
+  const latest = rows.slice().sort((a,b)=>a.period_end.localeCompare(b.period_end)).pop();
+  return { tire_units: latest.tire_units||0, tire_amt: latest.tire_amt||0, battery_units: latest.battery_units||0,
+    battery_amt: latest.battery_amt||0, chemical_units: latest.chemical_units||0, chemical_amt: latest.chemical_amt||0 };
+}
+function roster(loc){
+  const cm = curMonth();
+  const map = new Map(); let lastDay = 0;
+  (DATA.performance||[]).forEach(r => {
+    if (r.location!==loc || !r.period_end || !r.period_end.startsWith(cm)) return;
+    const d = Number(r.period_end.slice(8,10)); if (d>lastDay) lastDay=d;
+    const key = r.role+'|'+r.employee;
+    if (!map.has(key)) map.set(key, { employee:r.employee, role:r.role, dept:r.dept });
+    else if (r.dept) map.get(key).dept = r.dept;
+  });
+  return { people:[...map.values()], lastDay };
+}
+function diffCell(cur, base, label){
+  if (base === null || base === undefined) return `<span class="diff na">${label}無資料</span>`;
+  const d = cur - base;
+  const pct = base ? Math.round(d/base*1000)/10 : (cur>0?100:0);
+  const cls = d >= 0 ? 'up' : 'down';
+  const sign = d >= 0 ? '+' : '';
+  return `<span class="diff ${cls}">${label} ${sign}${fmt(d)} (${sign}${pct}%)</span>`;
+}
+
+/* ===== 詳細版改善施策（每項多步驟具體做法） ===== */
+const FIX = {
+  labor: [
+    '盤點該員當月工單結構：保養與維修的比例、平均單價，先分辨是「派工量不足」還是「單價偏低」',
+    '調出定保到期與久未回廠客戶名單，由接待主動電邀回廠，優先排給該技師補足工時',
+    '檢查常規項目有無漏報價：雨刷、濾網、煞車油、冷卻水等到期更換是否每台車都有主動建議',
+    '若連續兩個月落後，安排與廠長一對一檢討，確認技能或工位分配問題'
+  ],
+  parts: [
+    '每台進廠車落實五大項免費檢查（輪胎、電瓶、油水、燈光、雨刷），檢查結果寫進工單並當面說明',
+    '報價未成交的項目建檔追蹤，下次回廠前由接待再次提醒（含優惠訊息）',
+    '推套餐組合（保養＋添加劑＋清潔）取代單項報價，提高客單價',
+    '每週檢視零件推銷率（有推銷工單數÷總工單數），目標先設 50% 以上'
+  ],
+  out: [
+    '接車時繞車檢查外觀，發現鈑烤需求當場拍照＋口頭報價，轉介給鈑金組',
+    '確認接待→鈑金組的轉介流程有無斷點，估價單當日回覆客戶',
+    '外包項目（玻璃、輪圈、內裝修復）建立協力廠報價SOP，避免因回覆慢流失訂單'
+  ],
+  tire: [
+    '每台進廠車量測胎紋深度並記錄：低於4mm主動報價、低於2mm強烈建議立即更換（附安全話術）',
+    '檢查胎齡：超過5年即使胎紋足夠也要提醒橡膠老化風險',
+    '搭配「四輪定位＋輪胎調位」套餐推薦，提高成交率與客單價',
+    '對照去年同期銷售條數，設定本月要補回的具體條數目標'
+  ],
+  battery: [
+    '3年以上車齡進廠一律免費電瓶健檢，檢測單列印給車主留存',
+    'CCA值低於標準值70%的車輛主動報價更換，說明拋錨風險與道路救援成本',
+    '換季前（夏季高溫/冬季低溫）主動推電瓶健檢活動，建立回廠理由'
+  ],
+  chemical: [
+    '依里程級距主動建議：3萬公里油道清潔、6萬公里積碳清洗、9萬公里油路保養套餐',
+    '保養工單搭配機油添加劑建議，說明原廠認證與引擎保護效果',
+    '把化學品放進保養套餐一起報價（套餐價優於單點），降低被拒絕率'
+  ],
+  overall: [
+    '與廠長一對一面談，先確認是派工分配問題還是個人狀況',
+    '盤點該員技能證照與可承接工項，必要時安排訓練或調整工位',
+    '安排資深同仁帶教兩週，設定次月的具體回升目標並每週追蹤'
+  ]
+};
+function fixList(key){
+  return '<ul>' + FIX[key].map(s=>'<li>'+s+'</li>').join('') + '</ul>';
+}
+
+function buildFlags(p, cur, mom, yoy, pc, pm, py, avg){
+  const flags = [];
+  const cats = [ ['工資','labor','labor_amt'], ['零件','parts','parts_amt'], ['外修','out','outsourced_amt'] ];
+  cats.forEach(([name, fixKey, f]) => {
+    const yBase = yoy ? yoy[f] : null;
+    if (yBase !== null && yBase > 0 && cur[f] < yBase * 0.9){
+      const pct = Math.round((cur[f]-yBase)/yBase*100);
+      const sev = pct <= -30 ? '（衰退幅度大，建議廠長當面檢討）' : '';
+      flags.push({ type:'bad', t:`${name}較去年同期 ${pct}%（$${fmt(cur[f])} vs $${fmt(yBase)}）${sev}`, fix: fixList(fixKey) });
+    }
+    const mBase = mom ? mom[f] : null;
+    if (mBase !== null && mBase > 0 && cur[f] < mBase * 0.9){
+      const pct = Math.round((cur[f]-mBase)/mBase*100);
+      flags.push({ type:'warn', t:`${name}較上月同期 ${pct}%（$${fmt(cur[f])} vs $${fmt(mBase)}）`, fix: fixList(fixKey) });
+    }
+  });
+  if (p.role === '技師' && pc){
+    const sub = [ ['輪胎','tire'], ['電瓶','battery'], ['化學品','chemical'] ];
+    sub.forEach(([name,k]) => {
+      const yB = py ? py[k+'_amt'] : null;
+      if (yB !== null && yB > 0 && pc[k+'_amt'] < yB * 0.85){
+        const pct = Math.round((pc[k+'_amt']-yB)/yB*100);
+        flags.push({ type:'bad', t:`${name}銷售較去年同期 ${pct}%（$${fmt(pc[k+'_amt'])} vs $${fmt(yB)}）`, fix: fixList(k) });
+      }
+    });
+  }
+  if (avg > 0 && cur.untaxed_amt < avg * 0.6){
+    flags.push({ type:'bad', t:`總業績低於全廠${p.role}平均 40% 以上（$${fmt(cur.untaxed_amt)} vs 平均 $${fmt(avg)}）`, fix: fixList('overall') });
+  }
+  if (!flags.length){
+    flags.push({ type:'good', t:'各項指標無明顯落後，表現穩定', fix:'<ul><li>維持現有節奏，可設定更高的零件推銷率目標</li><li>可安排分享自身推銷做法給同組同仁</li></ul>' });
+  }
+  return flags;
+}
+
+function medalless(list){ return list.sort((a,b)=>b._cur.untaxed_amt-a._cur.untaxed_amt); }
+
+// 分組柱狀圖：工資/零件/外修 三組，每組 本期(藍)/上月(灰)/去年(橘) 三根柱
+function chartHTML(cur, mom, yoy){
+  const cats = [ ['工資','labor_amt'], ['零件','parts_amt'], ['外修','outsourced_amt'] ];
+  const vals = [];
+  cats.forEach(([_,f]) => { vals.push(cur[f]||0, mom?mom[f]||0:0, yoy?yoy[f]||0:0); });
+  const max = Math.max(...vals, 1);
+  const bar = (v, cls) => `<div class="cbar ${cls}" style="height:${Math.max(2, v/max*96)}px"><span>${v>0?fmt(Math.round(v/1000))+'k':''}</span></div>`;
+  const groups = cats.map(([name,f])=>`<div class="cgroup">
+    <div class="cbars">
+      ${bar(cur[f]||0,'cur')}
+      ${bar(mom?mom[f]||0:0,'mom')}
+      ${bar(yoy?yoy[f]||0:0,'yoy')}
+    </div>
+    <div class="cglabel">${name}</div>
+  </div>`).join('');
+  return `<div class="sec-t">📊 三期比較（單位：千元）</div>
+    <div class="chartwrap">
+      <div class="chart">${groups}</div>
+      ${pieHTML(cur)}
+    </div>
+    <div class="clegend"><span class="cl-cur"><i></i>本期</span><span class="cl-mom"><i></i>上月同期</span><span class="cl-yoy"><i></i>去年同期</span></div>`;
+}
+
+// 本期業績組成圓餅圖：工資/零件/外修 占比（用 conic-gradient 畫）
+function pieHTML(cur){
+  const segs = [ ['工資','labor_amt','var(--labor)'], ['零件','parts_amt','var(--parts)'], ['外修','outsourced_amt','var(--out)'] ];
+  const total = segs.reduce((a,[,f])=>a+(cur[f]||0), 0);
+  if (total <= 0) return `<div class="pie-box"><div style="color:var(--ink-soft);font-size:12px">本期無業績</div></div>`;
+  let acc = 0; const stops = [];
+  segs.forEach(([,f,c])=>{ const from=acc/total*360; acc+=(cur[f]||0); const to=acc/total*360; stops.push(`${c} ${from}deg ${to}deg`); });
+  const legend = segs.map(([name,f,c])=>{ const v=cur[f]||0; const pct=Math.round(v/total*100); return `<div><i style="background:${c}"></i>${name}<b>${pct}%</b></div>`; }).join('');
+  return `<div class="pie-box">
+    <div class="pie" style="background:conic-gradient(${stops.join(',')})"></div>
+    <div style="font-size:11px;color:var(--ink-soft);margin-top:8px">本期組成 $${fmt(total)}</div>
+    <div class="pie-legend">${legend}</div>
+  </div>`;
+}
+
+function goHome(){
+  curLoc = null; openPerson = null;
+  el('backBtn').textContent = '‹ 回主選單';
+  el('pageTitle').textContent='月度業績檢討';
+  const m=new Date();
+  el('subTitle').textContent=`${m.getFullYear()} 年 ${m.getMonth()+1} 月｜選擇廠區`;
+  el('plantView').style.display='none';
+  el('homeView').style.display='';
+  el('homeGrid').innerHTML = LOCS.map(loc=>{
+    const r = roster(loc);
+    return `<div class="plant-card" onclick="openPlant('${loc}')">
+      <div class="pname">${loc}廠 <span>›</span></div>
+      <div class="pmeta">${r.people.filter(p=>p.role==='技師').length} 位技師｜${r.people.filter(p=>p.role==='接待').length} 位接待專員${r.lastDay?`｜資料至 ${curMonth()}-${String(r.lastDay).padStart(2,'0')}`:'｜尚無本月資料'}</div>
+    </div>`;
+  }).join('');
+}
+
+function openPlant(loc){ curLoc=loc; openPerson=null; render(); }
+function togglePerson(key){ openPerson = (openPerson===key ? null : key); render(); }
+
+function render(){
+  const cm = curMonth(), pm = prevMonth(cm), ly = lastYearMonth(cm);
+  const { people, lastDay } = roster(curLoc);
+  el('backBtn').textContent = '‹ 回廠區選擇';
+  el('pageTitle').textContent = `${curLoc}廠 月度檢討`;
+  el('subTitle').textContent = `${cm} 同期比較（1日～${lastDay}日）｜vs 上月(${pm})｜vs 去年(${ly})`;
+  el('homeView').style.display='none';
+  el('plantView').style.display='';
+
+  const enriched = people.map(p => {
+    const cur = periodSum(p.employee, p.role, curLoc, cm, lastDay) || { order_count:0,labor_amt:0,parts_amt:0,outsourced_amt:0,untaxed_amt:0 };
+    return { ...p, _cur: cur };
+  });
+  const avgOf = role => {
+    const g = enriched.filter(p=>p.role===role);
+    return g.length ? g.reduce((a,p)=>a+p._cur.untaxed_amt,0)/g.length : 0;
+  };
+  const avgs = { '技師': avgOf('技師'), '接待': avgOf('接待') };
+
+  const personHTML = p => {
+    const key = p.role+'|'+p.employee;
+    const cur = p._cur;
+    const mom = periodSum(p.employee, p.role, curLoc, pm, lastDay);
+    const yoy = periodSum(p.employee, p.role, curLoc, ly, lastDay);
+    const pc = p.role==='技師' ? partsSum(p.employee, curLoc, cm, lastDay) : null;
+    const pmm = p.role==='技師' ? partsSum(p.employee, curLoc, pm, lastDay) : null;
+    const pyy = p.role==='技師' ? partsSum(p.employee, curLoc, ly, lastDay) : null;
+    const flags = buildFlags(p, cur, mom, yoy, pc, pmm, pyy, avgs[p.role]);
+    const badN = flags.filter(f=>f.type!=='good').length;
+    const opened = openPerson === key;
+
+    let body = '';
+    if (opened){
+      const row = (dot, name, f) => `<tr>
+        <td><span class="catdot" style="background:${dot}"></span>${name}</td>
+        <td class="r">$${fmt(cur[f])}</td>
+        <td class="r">${mom?('$'+fmt(mom[f])):'—'}${diffCell(cur[f], mom?mom[f]:null, '')}</td>
+        <td class="r">${yoy?('$'+fmt(yoy[f])):'—'}${diffCell(cur[f], yoy?yoy[f]:null, '')}</td>
+      </tr>`;
+      let partsRows = '';
+      if (p.role==='技師' && (pc||pyy||pmm)){
+        const sub = [ ['輪胎','tire'], ['電瓶','battery'], ['化學品','chemical'] ];
+        partsRows = sub.map(([name,k])=>`<tr>
+          <td style="padding-left:22px">└ ${name}</td>
+          <td class="r">${pc?('$'+fmt(pc[k+'_amt'])+'｜'+pc[k+'_units']+'件'):'—'}</td>
+          <td class="r">${pmm?('$'+fmt(pmm[k+'_amt'])):'—'}${diffCell(pc?pc[k+'_amt']:0, pmm?pmm[k+'_amt']:null, '')}</td>
+          <td class="r">${pyy?('$'+fmt(pyy[k+'_amt'])):'—'}${diffCell(pc?pc[k+'_amt']:0, pyy?pyy[k+'_amt']:null, '')}</td>
+        </tr>`).join('');
+      }
+      body = `<div class="p-body">
+        ${chartHTML(cur, mom, yoy)}
+        <table class="cmp">
+          <tr><th>項目</th><th class="r">本期</th><th class="r">上月同期</th><th class="r">去年同期</th></tr>
+          <tr>
+            <td><b>總業績</b></td>
+            <td class="r"><b>$${fmt(cur.untaxed_amt)}</b></td>
+            <td class="r">${mom?('$'+fmt(mom.untaxed_amt)):'—'}${diffCell(cur.untaxed_amt, mom?mom.untaxed_amt:null, '')}</td>
+            <td class="r">${yoy?('$'+fmt(yoy.untaxed_amt)):'—'}${diffCell(cur.untaxed_amt, yoy?yoy.untaxed_amt:null, '')}</td>
+          </tr>
+          ${row('var(--labor)','工資','labor_amt')}
+          ${row('var(--parts)','零件','parts_amt')}
+          ${partsRows}
+          ${row('var(--out)','外修','outsourced_amt')}
+        </table>
+        <div class="sec-t">${badN?'⚠️ 不足項目與改善施策':'✅ 檢討結果'}</div>
+        <ul class="flags">
+          ${flags.map(f=>`<li class="${f.type}"><b>${f.t}</b><div class="fix">💡 改善施策：${f.fix}</div></li>`).join('')}
+        </ul>
+      </div>`;
+    }
+
+    return `<div class="person">
+      <div class="p-head" onclick="togglePerson('${key}')">
+        <div><div class="nm">${p.employee}</div><div class="dp">${p.dept||''}</div></div>
+        <div class="flagn ${badN?'':'ok'}">${badN ? badN+' 項待改善' : '表現穩定'}</div>
+        <div class="tot">$${fmt(cur.untaxed_amt)}<small>${cur.order_count} 張工單</small></div>
+        <div class="caret">${opened?'▲':'▼'}</div>
+      </div>
+      ${body}
+    </div>`;
+  };
+
+  const tech = medalless(enriched.filter(p=>p.role==='技師'));
+  const adv  = medalless(enriched.filter(p=>p.role==='接待'));
+  el('personList').innerHTML =
+    (tech.length?`<div class="role-t">🔧 承修技師（${tech.length}）</div>`+tech.map(personHTML).join(''):'') +
+    (adv.length?`<div class="role-t">🤝 接待專員（${adv.length}）</div>`+adv.map(personHTML).join(''):'') ||
+    '<div style="color:var(--ink-soft)">本月尚無資料</div>';
+}
+
+// 🦞 免費雲端主機喚醒約需50-60秒，重試時長涵蓋完整喚醒時間
+async function init(){
+  const MAX_TRY = 12;
+  el('loading').innerHTML = '📊 資料載入中…<br><span style="font-size:12px;opacity:.7">首次開啟需喚醒伺服器，約需 1 分鐘，請稍候</span>';
+  for (let i=1;i<=MAX_TRY;i++){
+    try{
+      const res = await fetch('/api/my-performance?code=mgr_gm', { cache:'no-store' });
+      DATA = await res.json();
+      if (!DATA.ok) throw new Error(DATA.error||'讀取失敗');
+      el('loading').style.display='none';
+      goHome();
+      return;
+    }catch(e){
+      if (i===MAX_TRY){
+        el('loading').innerHTML = '❌ 載入失敗，可能是網路或伺服器忙碌<br><br><button onclick="location.reload()" style="padding:10px 24px;font-size:15px;border:none;border-radius:10px;background:#16233d;color:#fff;cursor:pointer">🔄 再試一次</button>';
+      } else {
+        el('loading').innerHTML = `⏳ 伺服器喚醒中…（${i}/${MAX_TRY}）<br><span style="font-size:12px;opacity:.7">首次開啟約需 1 分鐘，請稍候</span>`;
+        await new Promise(r=>setTimeout(r,6000));
+      }
+    }
+  }
+}
+
+// 已通過密碼就直接進，否則停在鎖畫面
+if (sessionStorage.getItem('review_ok') === '1'){
+  el('lockView').style.display='none';
+  el('loading').style.display='';
+  init();
+} else {
+  el('pwInput').focus();
+}
+</script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>月度業績檢討</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#16233d; --paper:#f3f0e8; --paper-2:#fff; --ink:#16233d; --ink-soft:#5c6a86;
+    --line:#d8d2c2; --labor:#2e5da8; --parts:#e2a72e; --out:#56b4d3;
+    --green:#3a7d5c; --red:#b5432f; --radius:14px;
+  }
+  *{box-sizing:border-box;} html,body{margin:0;padding:0;}
+  body{ background:var(--paper); color:var(--ink); font-family:'Noto Sans TC',sans-serif; -webkit-font-smoothing:antialiased; min-height:100vh; }
+  .mono{ font-family:'Roboto Mono',monospace; font-variant-numeric:tabular-nums; }
+
+  .topbar{ background:var(--navy); color:#f3f0e8; padding:18px 22px; position:sticky; top:0; z-index:20; box-shadow:0 4px 14px rgba(22,35,61,.25); }
+  .topbar .brand{ font-size:11px; letter-spacing:.14em; opacity:.65; text-transform:uppercase; font-family:'Roboto Mono',monospace; }
+  .topbar h1{ margin:4px 0 0; font-size:22px; font-weight:900; }
+  .topbar .sub{ margin-top:5px; font-size:12.5px; opacity:.75; }
+  .back-btn{ background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.3); color:#f3f0e8; border-radius:999px; padding:6px 16px; font-size:13px; cursor:pointer; margin-bottom:8px; }
+
+  .wrap{ max-width:1080px; margin:0 auto; padding:22px 18px 60px; }
+  #loading{ text-align:center; padding:80px 20px; color:var(--ink-soft); }
+
+  /* 密碼鎖 */
+  #lockView{ max-width:380px; margin:60px auto 0; background:var(--paper-2); border:1px solid var(--line); border-radius:18px; padding:30px 28px; text-align:center; }
+  #lockView .lk{ font-size:40px; }
+  #lockView h2{ margin:10px 0 4px; font-size:19px; font-weight:900; }
+  #lockView p{ font-size:12.5px; color:var(--ink-soft); margin:0 0 20px; line-height:1.7; }
+  #lockView input{ width:100%; padding:13px; font-size:18px; text-align:center; letter-spacing:.4em; border:1.5px solid var(--line); border-radius:12px; background:#fbfaf6; font-family:'Roboto Mono',monospace; }
+  #lockView button{ width:100%; margin-top:14px; padding:13px; font-size:15px; font-weight:700; color:#fff; background:var(--navy); border:none; border-radius:12px; cursor:pointer; }
+  #lockErr{ color:var(--red); font-size:13px; min-height:20px; margin-top:10px; }
+
+  .home-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:680px){ .home-grid{ grid-template-columns:1fr; } }
+  .plant-card{ background:var(--paper-2); border:1.5px solid var(--line); border-radius:18px; padding:24px; cursor:pointer; transition:transform .12s, box-shadow .12s; }
+  .plant-card:hover{ transform:translateY(-2px); box-shadow:0 8px 22px rgba(22,35,61,.12); }
+  .plant-card .pname{ font-size:20px; font-weight:900; display:flex; justify-content:space-between; }
+  .plant-card .pmeta{ margin-top:10px; font-size:13px; color:var(--ink-soft); }
+
+  .person{ background:var(--paper-2); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:14px; overflow:hidden; }
+  .p-head{ display:flex; align-items:center; gap:12px; padding:14px 16px; cursor:pointer; }
+  .p-head:hover{ background:#faf8f2; }
+  .p-head .nm{ font-weight:900; font-size:16px; }
+  .p-head .dp{ font-size:11px; color:var(--ink-soft); }
+  .p-head .tot{ margin-left:auto; text-align:right; font-family:'Roboto Mono',monospace; font-weight:900; font-size:16px; }
+  .p-head .tot small{ display:block; font-size:10.5px; font-weight:400; color:var(--ink-soft); }
+  .p-head .flagn{ font-size:11px; background:#f8e8e4; color:var(--red); border-radius:999px; padding:3px 10px; white-space:nowrap; }
+  .p-head .flagn.ok{ background:#e7f2ec; color:var(--green); }
+  .p-head .caret{ color:var(--ink-soft); }
+
+  .p-body{ border-top:1px dashed var(--line); padding:14px 16px 16px; background:#fbfaf6; }
+  table.cmp{ width:100%; border-collapse:collapse; font-size:13px; }
+  table.cmp th{ text-align:left; color:var(--ink-soft); font-weight:500; font-size:11px; padding:5px 6px; border-bottom:1px solid var(--line); }
+  table.cmp th.r, table.cmp td.r{ text-align:right; font-family:'Roboto Mono',monospace; }
+  table.cmp td{ padding:6px; border-bottom:1px dashed #eae5d8; }
+  .diff{ font-size:11px; display:block; }
+  .diff.up{ color:var(--green); } .diff.down{ color:var(--red); } .diff.na{ color:var(--ink-soft); }
+  .catdot{ display:inline-block; width:9px; height:9px; border-radius:3px; margin-right:6px; vertical-align:0; }
+
+  .sec-t{ font-size:12px; color:var(--ink-soft); font-weight:700; margin:14px 0 6px; }
+
+  /* 分組柱狀圖：三項目×三時期 */
+  .chart{ display:flex; gap:16px; align-items:flex-end; padding:12px 4px 4px; border:1px solid var(--line); border-radius:10px; background:#fff; margin-bottom:4px; }
+  .cgroup{ flex:1; display:flex; flex-direction:column; align-items:center; gap:5px; }
+  .cbars{ display:flex; gap:4px; align-items:flex-end; height:96px; }
+  .cbar{ width:15px; border-radius:3px 3px 0 0; position:relative; min-height:2px; }
+  .cbar.cur{ background:var(--labor); } .cbar.mom{ background:#b9b0a0; } .cbar.yoy{ background:#d98a4a; }
+  .cbar span{ position:absolute; top:-15px; left:50%; transform:translateX(-50%); font-size:9px; color:var(--ink-soft); white-space:nowrap; font-family:'Roboto Mono',monospace; }
+  .cglabel{ font-size:11.5px; font-weight:700; }
+  .clegend{ display:flex; gap:14px; justify-content:center; font-size:11px; color:var(--ink-soft); margin:4px 0 12px; }
+  .clegend i{ display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:4px; vertical-align:-1px; }
+  .cl-cur i{ background:var(--labor); } .cl-mom i{ background:#b9b0a0; } .cl-yoy i{ background:#d98a4a; }
+
+  /* 本期組成圓餅圖 */
+  .chartwrap{ display:flex; gap:12px; flex-wrap:wrap; align-items:stretch; margin-bottom:4px; }
+  .chartwrap .chart{ flex:2; min-width:220px; margin-bottom:0; }
+  .pie-box{ flex:1; min-width:150px; border:1px solid var(--line); border-radius:10px; background:#fff; padding:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .pie-box .pie{ width:96px; height:96px; border-radius:50%; }
+  .pie-legend{ margin-top:10px; font-size:11px; color:var(--ink-soft); width:100%; }
+  .pie-legend div{ display:flex; align-items:center; gap:6px; padding:1px 0; }
+  .pie-legend i{ width:10px; height:10px; border-radius:2px; flex-shrink:0; }
+  .pie-legend b{ margin-left:auto; font-family:'Roboto Mono',monospace; color:var(--ink); }
+  .flags{ margin:0; padding:0; list-style:none; }
+  .flags li{ padding:10px 12px; border-radius:9px; margin-bottom:8px; font-size:13px; line-height:1.6; }
+  .flags li.bad{ background:#f8e8e4; }
+  .flags li.warn{ background:#fdf3e0; }
+  .flags li.good{ background:#e7f2ec; }
+  .flags li b{ display:block; margin-bottom:4px; }
+  .flags li ul{ margin:4px 0 0; padding-left:18px; }
+  .flags li ul li{ background:none; padding:2px 0; margin:0; border-radius:0; font-size:12.5px; color:#3d4a63; }
+  .foot{ text-align:center; color:var(--ink-soft); font-size:11.5px; margin-top:8px; }
+  .role-t{ font-size:16px; font-weight:900; margin:20px 0 10px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="back-btn" id="backBtn" onclick="goBack()">‹ 回主選單</button>
   <div class="brand">CHOCOLATE MOTORS</div>
   <h1 id="pageTitle">月度業績檢討</h1>
   <div class="sub" id="subTitle">管理層專用</div>
