@@ -357,8 +357,8 @@ function goHome(){
   curLoc = null; openKey = null; openCat = null;
   el('backBtn').textContent = '‹ 回主選單';
   el('pageTitle').textContent = '全員業績總覽';
-  const m = new Date();
-  el('subTitle').textContent = `${m.getFullYear()} 年 ${m.getMonth()+1} 月｜選擇廠區`;
+  const _ym = curMonth().split('-');
+  el('subTitle').textContent = `${_ym[0]} 年 ${Number(_ym[1])} 月｜選擇廠區`;
   el('plantView').style.display = 'none';
   el('homeView').style.display = '';
   el('homeGrid').innerHTML = LOCS.map(loc => {
@@ -392,8 +392,8 @@ function openPlant(loc){
 function render(){
   const st = plantStats(curLoc);
   el('pageTitle').textContent = `${curLoc}廠 業績總覽`;
-  const m = new Date();
-  el('subTitle').textContent = `${m.getFullYear()} 年 ${m.getMonth()+1} 月｜技師＋接待專員全員排名`;
+  const _ym = curMonth().split('-');
+  el('subTitle').textContent = `${_ym[0]} 年 ${Number(_ym[1])} 月｜技師＋接待專員全員排名`;
 
   el('kpiRow').innerHTML = `
     <div class="kpi hero"><div class="label">${curLoc}廠 本月累計業績</div><div class="value">$${fmt(st.total)}</div></div>
