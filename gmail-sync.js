@@ -9,6 +9,17 @@ const { getValidFirebaseToken, saveToFirebase, detectReportType, parse205Buffer,
 const SYNC_INTERVAL_MS = 2 * 60 * 60 * 1000; // 2小時，跟主專案 scheduledScanCron 同頻率
 const GMAIL_QUERY = 'subject:(業績 OR 日報 OR KPI OR 報表 OR 1G0 OR 銷售獎金 OR 零件) newer_than:7d';
 
+// 🦞 已離職/調動人員排除名單：報表裡（尤其7月月報）還會出現他們的舊工單，每次同步都會被重新灌回，
+//    所以在寫入前直接濾掉，海哥手動刪過就不會再自己跑回來。
+//    李俊輝＝調回永康（永康的紀錄要保留，只擋歸仁）；陳俊廷＝離職（擋歸仁）。
+const EXCLUDE_EMP = [
+  { name: '李俊輝', location: '歸仁' },
+  { name: '陳俊廷', location: '歸仁' },
+];
+function isExcludedEmp(d) {
+  return EXCLUDE_EMP.some(e => e.name === d.employee && e.location === d.location);
+}
+
 function decodeAttachmentData(raw) {
   return Buffer.from(raw.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
 }
@@ -51,6 +62,7 @@ async function syncOnce() {
         else if (type === '1G0') docs = parse1G0_1Buffer(buf, a.filename);
         if (!docs.length) { console.log(`  ⏭️  ${a.filename}（非205/1G0報表或解析不到資料，略過）`); continue; }
         for (const d of docs) {
+          if (isExcludedEmp(d)) continue; // 已離職/調動人員，不寫回
           const ok = await saveToFirebase(token, d);
           if (ok) written++;
         }
