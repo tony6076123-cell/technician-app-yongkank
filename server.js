@@ -95,10 +95,11 @@ const server = http.createServer(async (req, res) => {
       const isManager = user.level === 'manager';
       const myPerf = isManager ? perf : perf.filter(p => p.employee === user.name);
       const myParts = isManager ? parts : parts.filter(p => p.employee === user.name);
-      const curMonth = new Date().toISOString().slice(0, 7);
+      // 🦞 回傳全部月目標，讓前端依「顯示月份」自己挑（月初當月還沒資料時前端會退回最近有資料的月份；
+      //    若這裡先用當月過濾，會把該顯示月份的目標濾掉，導致達成率顯示未設定）
       const myTargets = isManager
-        ? targets.filter(t => t._id.endsWith('_' + curMonth))
-        : targets.filter(t => t._id === `${user.location}_${curMonth}`);
+        ? targets
+        : targets.filter(t => t._id.startsWith(`${user.location}_`));
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
       res.end(JSON.stringify({ ok: true, level: user.level, user: { name: user.name, location: user.location, dept: user.dept, role: user.role }, performance: myPerf, parts: myParts, targets: myTargets }));
     } catch (e) {
