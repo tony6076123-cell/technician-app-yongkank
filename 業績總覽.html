@@ -229,7 +229,17 @@ let curLoc = null;    // null = 首頁
 let openKey = null;
 let openCat = null;
 
-const curMonth = () => new Date().toISOString().slice(0,7);
+// 🦞 顯示月份：優先用「本地時間的當月」；若當月還沒有任何資料（例如月初新月份、日常報表還沒進來），
+//    自動退回「最近一個有資料的月份」，避免月初整頁顯示 $0。等新月份報表進來就會自動跳回當月。
+const curMonth = () => {
+  const now = new Date();
+  const cal = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  const perf = (typeof DATA !== 'undefined' && DATA.performance) || [];
+  if (perf.some(r => r.period_end && r.period_end.startsWith(cal))) return cal;
+  let latest = '';
+  perf.forEach(r => { if (r.period_end) { const m = r.period_end.slice(0,7); if (m > latest) latest = m; } });
+  return latest || cal;
+};
 
 // 🦞 205/1G0 report本身就是「當月1號~匯出當天」累計數字，取最新一筆快照即為本月累計，不能加總多筆快照（會重複計算）
 function monthlySums(perf){
@@ -301,9 +311,16 @@ function plantStats(loc){
 // 已過天數／當月總天數（判斷進度是超前還是落後的參考線）
 function monthProgressPct(lastDay){
   const now = new Date();
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
-  const d = lastDay ? Number(lastDay.slice(8,10)) : now.getDate();
-  return Math.round(d/daysInMonth*1000)/10;
+  const cal = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  if (lastDay) {
+    const ym = lastDay.slice(0,7);
+    const parts = ym.split('-').map(Number);
+    const daysInMonth = new Date(parts[0], parts[1], 0).getDate();
+    if (ym < cal) return 100; // 顯示的是過去月份，整月已結束，時間進度=100%
+    return Math.round(Number(lastDay.slice(8,10))/daysInMonth*1000)/10;
+  }
+  const dim = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+  return Math.round(now.getDate()/dim*1000)/10;
 }
 
 function dailyRows(employee, role, location){
