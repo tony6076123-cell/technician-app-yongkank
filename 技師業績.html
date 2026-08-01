@@ -305,8 +305,20 @@ function lastYearRecord(list, employee){
 // 🦞 2026-07-09起：報表改成「每日獨立匯出」，不再是月累計快照。
 // 本月業績 = 把當月所有日快照加總，不能再用latestByEmployee()當「最新=累計」。
 // 🦞 205/1G0 report本身就是「當月1號~匯出當天」累計數字，取最新一筆快照即為本月累計，不能加總多筆快照（會重複計算）
+// 🦞 顯示月份：當月有資料就用當月；月初當月還沒資料就退回最近一個有資料的月份，
+//    讓技師業績頁跟總覽對齊（同一個月的數字），不會8月1號一到就整頁變空白/對不上總覽。
+function displayMonth(){
+  const now = new Date();
+  const cal = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  const arr = (session && session.performance) || [];
+  if (arr.some(r => r.period_end && r.period_end.startsWith(cal))) return cal;
+  let latest = '';
+  arr.forEach(r => { if (r.period_end) { const m = r.period_end.slice(0,7); if (m > latest) latest = m; } });
+  return latest || cal;
+}
+
 function sumMonthToDate(list, employee, role){
-  const curMonth = new Date().toISOString().slice(0,7);
+  const curMonth = displayMonth();
   const rows = (list||[]).filter(p => p.employee===employee && p.role===role && p.period_end && p.period_end.startsWith(curMonth));
   if (!rows.length) return null;
   const latest = rows.slice().sort((a,b)=>a.period_end.localeCompare(b.period_end)).pop();
@@ -318,7 +330,7 @@ function sumMonthToDate(list, employee, role){
 }
 
 function sumPartsMonthToDate(list, employee){
-  const curMonth = new Date().toISOString().slice(0,7);
+  const curMonth = displayMonth();
   const rows = (list||[]).filter(p => p.employee===employee && p.period_end && p.period_end.startsWith(curMonth));
   if (!rows.length) return null;
   const latest = rows.slice().sort((a,b)=>a.period_end.localeCompare(b.period_end)).pop();
@@ -332,7 +344,7 @@ function sumPartsMonthToDate(list, employee){
 
 // 某員工當月每一筆日快照，依日期排序（每日業績分頁直接用，不用再反推delta）
 function dailyRecords(list, employee, role){
-  const curMonth = new Date().toISOString().slice(0,7);
+  const curMonth = displayMonth();
   return (list||[]).filter(p => p.employee===employee && p.role===role && p.period_end && p.period_end.startsWith(curMonth))
     .sort((a,b)=>a.period_end.localeCompare(b.period_end));
 }
