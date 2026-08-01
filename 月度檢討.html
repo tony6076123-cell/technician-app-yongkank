@@ -150,7 +150,17 @@ function goBack(){
   else { window.location.href = '/'; }    // 廠區選擇 → App 主選單
 }
 
-const curMonth = () => new Date().toISOString().slice(0,7);
+// 🦞 顯示月份：當月有資料就用當月；月初當月還沒資料時自動退回最近一個有資料的月份，
+//    避免月初打開整頁「尚無本月資料」。等當月報表進來就自動跳回當月。
+const curMonth = () => {
+  const now = new Date();
+  const cal = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  const perf = (typeof DATA !== 'undefined' && DATA && DATA.performance) || [];
+  if (perf.some(r => r.period_end && r.period_end.startsWith(cal))) return cal;
+  let latest = '';
+  perf.forEach(r => { if (r.period_end) { const m = r.period_end.slice(0,7); if (m > latest) latest = m; } });
+  return latest || cal;
+};
 function prevMonth(ym){ const [y,m]=ym.split('-').map(Number); const d=new Date(y, m-2, 1); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
 function lastYearMonth(ym){ const [y,m]=ym.split('-'); return (Number(y)-1)+'-'+m; }
 
