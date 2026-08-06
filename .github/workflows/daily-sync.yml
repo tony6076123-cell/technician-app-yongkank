@@ -2,7 +2,9 @@ name: Daily Gmail Sync
 
 on:
   schedule:
-    - cron: '0 1 * * *'
+    - cron: '0 1 * * *'    # 台灣 09:00
+    - cron: '0 7 * * *'    # 台灣 15:00（接下午寄的報表）
+    - cron: '0 10 * * *'   # 台灣 18:00（接傍晚寄的報表）
   workflow_dispatch: {}
 
 jobs:
