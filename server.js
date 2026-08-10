@@ -165,8 +165,13 @@ server.listen(PORT, async () => {
       console.log(`❌ 自動建立名單失敗: ${e.message}`);
     }
   }
-  // 🦞 2026-07-12起改為排程模式：不再每2小時自動掃描，
-  //    由 GitHub Actions 每天早上9點（台灣時間）呼叫 /api/sync-now 觸發掃描。
-  //    需要臨時補掃時也可手動 POST /api/sync-now。
-  console.log('📧 信箱掃描：排程模式（每天 09:00 由外部觸發 /api/sync-now）');
+  // 🦞 2026-08-09重新啟用內建定時同步：每2小時自己抓一次信箱（開機也先補抓一次），
+  //    配合keepalive讓伺服器白天不睡，就不必只靠GitHub排程（會延遲/塞車、常漏抓）。
+  //    早上寄的報表最慢2小時內會自己進來，不用再手動觸發。/api/sync-now 仍可隨時手動補抓。
+  try {
+    require('./gmail-sync.js').startGmailSyncLoop();
+    console.log('📧 信箱掃描：內建每2小時自動掃 + 開機補抓（不再只靠GitHub 09:00）');
+  } catch (e) {
+    console.log(`❌ 啟動內建同步迴圈失敗: ${e.message}`);
+  }
 });
