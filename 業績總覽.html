@@ -333,21 +333,18 @@ function dailyRows(employee, role, location){
   return rows.length ? [rows[rows.length-1]] : [];
 }
 
+// 🦞 1G0報表每天寄一份，內容是「當月1號~當天」的累計，不是當天新增。
+//    所以品項明細只能取「當月最新那一份快照」，不能把每天的快照相加
+//    （相加會變成 4條輪胎×22天=88條 這種灌水數字，員工會抱怨業績被灌爆）。
 function partsItems(employee, location){
   const cm = curMonth();
   const rows = (DATA.parts||[]).filter(p => p.employee===employee && p.location===location
       && p.period_end && p.period_end.startsWith(cm));
-  const itemMap = new Map();
-  rows.forEach(r => {
-    let items = [];
-    try{ items = r.items_json ? JSON.parse(r.items_json) : []; }catch(e){}
-    items.forEach(it => {
-      const key = it.partNo+'|'+it.desc;
-      if (!itemMap.has(key)) itemMap.set(key, { partNo:it.partNo, desc:it.desc, qty:0, amt:0 });
-      const e2 = itemMap.get(key); e2.qty += it.qty||0; e2.amt += it.amt||0;
-    });
-  });
-  return [...itemMap.values()].sort((a,b)=>b.amt-a.amt);
+  if (!rows.length) return [];
+  const latest = rows.slice().sort((a,b)=>a.period_end.localeCompare(b.period_end)).pop();
+  let items = [];
+  try{ items = latest.items_json ? JSON.parse(latest.items_json) : []; }catch(e){}
+  return items.slice().sort((a,b)=>(b.amt||0)-(a.amt||0));
 }
 
 function medal(i){ return i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1); }
