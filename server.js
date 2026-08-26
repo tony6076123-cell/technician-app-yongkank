@@ -14,6 +14,8 @@ const server = http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  // 🦞 不要讓瀏覽器快取頁面/資料：否則我改好程式後，員工手機還是看到舊版（曾害輪胎顯示成加總的舊算法）。
+  res.setHeader('Cache-Control', 'no-store, must-revalidate');
   if (req.method === 'OPTIONS') { res.writeHead(200); res.end(); return; }
 
   // 🦞 App 入口主選單（測試版）：三大功能一頁選
