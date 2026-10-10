@@ -19,6 +19,7 @@
     --labor: #1d1d1f;   /* 炭黑＝工資 */
     --parts: #e11d2a;   /* 車廠紅＝零件 */
     --out:   #aeaeb2;   /* 淺灰＝外修 */
+    --ahead: #2e5da8;  /* 🔵 目標進度超前＝藍色（legend 寫藍色，顏色就得是藍色，別跟著主色換掉） */
     --green: #1f8a4c;
     --radius: 14px;
   }
@@ -338,9 +339,11 @@ function dailyRows(employee, role, location){
 // 🦞 1G0報表每天寄一份，內容是「當月1號~當天」的累計，不是當天新增。
 //    所以品項明細只能取「當月最新那一份快照」，不能把每天的快照相加
 //    （相加會變成 4條輪胎×22天=88條 這種灌水數字，員工會抱怨業績被灌爆）。
-function partsItems(employee, location){
+// role='接待' 時改讀 receptionist_parts_summary（同一批工單的接待視角，兩邊不可相加）
+function partsItems(employee, location, role){
   const cm = curMonth();
-  const rows = (DATA.parts||[]).filter(p => p.employee===employee && p.location===location
+  const src = role === '接待' ? (DATA.recpParts||[]) : (DATA.parts||[]);
+  const rows = src.filter(p => p.employee===employee && p.location===location
       && p.period_end && p.period_end.startsWith(cm));
   if (!rows.length) return [];
   const latest = rows.slice().sort((a,b)=>a.period_end.localeCompare(b.period_end)).pop();
@@ -412,7 +415,7 @@ function render(){
     const show = isCar ? `${fmt(actual)} / ${fmt(target)}${unit}` : `$${fmt(actual)} / $${fmt(target)}`;
     return `<div class="dayrow">
       <div class="dt">${name}</div>
-      <div class="dbar"><i style="width:${Math.min(100,pct)}%; background:${pct>=100?'var(--green)':(ahead?'var(--labor)':'#d98a4a')}"></i></div>
+      <div class="dbar"><i style="width:${Math.min(100,pct)}%; background:${pct>=100?'var(--green)':(ahead?'var(--ahead)':'#d98a4a')}"></i></div>
       <div class="dv">${pct}%<small> ${show}</small></div>
     </div>`;
   };
@@ -503,10 +506,26 @@ function detailHTML(s){
   }).join('');
 
   let itemsHTML = '';
-  if (openCat === 'parts' && s.role === '技師'){
-    const items = partsItems(s.employee, s.location);
+  // 接待延長保固件數：只有接待有，放在明細最上面
+  if (s.role === '接待'){
+    const cm = curMonth();
+    const ews = (DATA.warranty||[]).filter(w => w.employee===s.employee && w.location===s.location
+        && (w.period_start||'').startsWith(cm));
+    const ewLast = ews.length ? ews.sort((a,b)=>(a.period_end||'').localeCompare(b.period_end||'')).pop() : null;
+    const ewYear = (DATA.warranty||[]).filter(w => w.employee===s.employee && w.location===s.location)
+      .reduce((m,w)=>{ const k=(w.period_start||'').slice(0,7); const cur=m.get(k);
+        if(!cur || (w.period_end||'')>(cur.period_end||'')) m.set(k,w); return m; }, new Map());
+    const ewYearSum = [...ewYear.values()].reduce((a,w)=>a+(w.warranty_units||0),0);
+    itemsHTML += `<div class="dsec-title">🛡 延長保固販售</div>
+      <div class="dayrow"><div class="dt">本月</div><div class="dbar" style="background:none"></div>
+        <div class="dv">${ewLast ? ewLast.warranty_units+' 件' : '0 件'}<small> ${ewLast?('$'+fmt(ewLast.warranty_amt||0)):''}</small></div></div>
+      <div class="dayrow"><div class="dt">年累計</div><div class="dbar" style="background:none"></div>
+        <div class="dv">${ewYearSum} 件<small> App 上線起</small></div></div>`;
+  }
+  if (openCat === 'parts'){
+    const items = partsItems(s.employee, s.location, s.role);
     if (items.length){
-      itemsHTML = `<div class="dsec-title">🧾 零件品項明細（本月，來自1G0報表）</div>
+      itemsHTML += `<div class="dsec-title">🧾 零件品項明細（本月，來自1G0報表${s.role==='接待'?'・接待視角':''}）</div>
       <table class="items">
         <tr><th>品名</th><th>料號</th><th class="r">數量</th><th class="r">金額</th></tr>
         ${items.slice(0,15).map(it=>`<tr><td>${it.desc||''}</td><td class="mono" style="font-size:11px">${it.partNo||''}</td><td class="r">${it.qty}</td><td class="r">$${fmt(it.amt)}</td></tr>`).join('')}
@@ -514,7 +533,7 @@ function detailHTML(s){
       ${items.length>15?`<div class="items-note">僅列前 15 項（共 ${items.length} 項）</div>`:''}
       <div class="items-note">品項加總可能與上方零件金額有小落差（205 與 1G0 兩份報表統計口徑差異）</div>`;
     } else {
-      itemsHTML = `<div class="items-note">本月尚無零件品項明細資料</div>`;
+      itemsHTML += `<div class="items-note">本月尚無零件品項明細資料</div>`;
     }
   }
 

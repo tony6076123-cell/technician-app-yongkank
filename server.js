@@ -113,19 +113,27 @@ const server = http.createServer(async (req, res) => {
         res.end(JSON.stringify({ ok: false, error: '工號錯誤，請重新登入' }));
         return;
       }
-      const [perf, parts, targets] = await Promise.all([
-        readFirebase('technician_performance'), readFirebase('technician_parts_summary'), readFirebase('monthly_targets')
+      // 🦞 2026-10-10 加兩個 collection：接待的零件明細與延長保固件數，讓接待也有跟技師一樣的下鑽。
+      //    🔴 recpParts 跟 parts 是同一批工單的兩種視角，**前端絕不可相加**（相加＝輪胎算兩次）。
+      const [perf, parts, recpParts, warranty, targets] = await Promise.all([
+        readFirebase('technician_performance'),
+        readFirebase('technician_parts_summary'),
+        readFirebase('receptionist_parts_summary').catch(() => []),
+        readFirebase('warranty_sales').catch(() => []),
+        readFirebase('monthly_targets'),
       ]);
       const isManager = user.level === 'manager';
       const myPerf = isManager ? perf : perf.filter(p => p.employee === user.name);
       const myParts = isManager ? parts : parts.filter(p => p.employee === user.name);
+      const myRecpParts = isManager ? recpParts : recpParts.filter(p => p.employee === user.name);
+      const myWarranty = isManager ? warranty : warranty.filter(p => p.employee === user.name);
       // 🦞 回傳全部月目標，讓前端依「顯示月份」自己挑（月初當月還沒資料時前端會退回最近有資料的月份；
       //    若這裡先用當月過濾，會把該顯示月份的目標濾掉，導致達成率顯示未設定）
       const myTargets = isManager
         ? targets
         : targets.filter(t => t._id.startsWith(`${user.location}_`));
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-      res.end(JSON.stringify({ ok: true, level: user.level, user: { name: user.name, location: user.location, dept: user.dept, role: user.role }, performance: myPerf, parts: myParts, targets: myTargets }));
+      res.end(JSON.stringify({ ok: true, level: user.level, user: { name: user.name, location: user.location, dept: user.dept, role: user.role }, performance: myPerf, parts: myParts, recpParts: myRecpParts, warranty: myWarranty, targets: myTargets }));
     } catch (e) {
       res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
       res.end(JSON.stringify({ ok: false, error: e.message }));
