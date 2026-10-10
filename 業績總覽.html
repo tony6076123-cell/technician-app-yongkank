@@ -533,7 +533,14 @@ function detailHTML(s){
       ${items.length>15?`<div class="items-note">僅列前 15 項（共 ${items.length} 項）</div>`:''}
       <div class="items-note">品項加總可能與上方零件金額有小落差（205 與 1G0 兩份報表統計口徑差異）</div>`;
     } else {
-      itemsHTML += `<div class="items-note">本月尚無零件品項明細資料</div>`;
+      // 🦞 2026-10-10：有些人（交車窗口、零件組）205 有零件金額，但 1G0 查不到任何一列。
+      //    1G0 是「銷售獎金一覽表」，只收算獎金的維修零件；交車配件/精品走別條帳，不在裡面。
+      //    這不是系統壞掉，要講清楚，否則會被當成漏抓（海哥問過劉倍源那 10 萬）。
+      const hasAmt = (s.parts_amt || 0) > 0;
+      itemsHTML += hasAmt
+        ? `<div class="items-note">205 有零件金額 $${fmt(s.parts_amt)}，但 1G0 銷售獎金報表查不到這些品項 —
+             通常是交車配件／精品之類不列入維修零件獎金的項目，來源報表就沒有明細，不是資料漏抓。</div>`
+        : `<div class="items-note">本月尚無零件品項明細資料</div>`;
     }
   }
 
