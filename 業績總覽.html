@@ -7,17 +7,19 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
+  /* 2026-10-09 改版：換成跟「業績報表」頁同一套視覺（炭黑＋車廠紅＋灰階，白底卡片）。
+     只改顏色與圓角，版面結構與所有計算邏輯完全沒動。 */
   :root{
-    --navy: #16233d;
-    --paper: #f3f0e8;
-    --paper-2: #ffffff;
-    --ink: #16233d;
-    --ink-soft: #5c6a86;
-    --line: #d8d2c2;
-    --labor: #2e5da8;   /* 藍色＝工資 */
-    --parts: #e2a72e;   /* 黃色＝零件 */
-    --out:   #56b4d3;   /* 水藍＝外修 */
-    --green: #3a7d5c;
+    --navy: #111316;    /* 深色標題帶 */
+    --paper: #f2f3f5;   /* 頁面底 */
+    --paper-2: #ffffff; /* 卡片 */
+    --ink: #1d1d1f;
+    --ink-soft: #86868b;
+    --line: #e5e5ea;
+    --labor: #1d1d1f;   /* 炭黑＝工資 */
+    --parts: #e11d2a;   /* 車廠紅＝零件 */
+    --out:   #aeaeb2;   /* 淺灰＝外修 */
+    --green: #1f8a4c;
     --radius: 14px;
   }
   *{box-sizing:border-box;}
@@ -32,29 +34,29 @@
   .mono{ font-family:'Roboto Mono', monospace; font-variant-numeric: tabular-nums; }
 
   .topbar{
-    background: var(--navy); color:#f3f0e8;
+    background: var(--navy); color:#f2f3f5;
     padding: 18px 22px; position: sticky; top:0; z-index:20;
-    box-shadow: 0 4px 14px rgba(22,35,61,0.25);
+    box-shadow: 0 4px 14px rgba(17,19,22,0.25);
   }
   .topbar .brand{ font-size:11px; letter-spacing:.14em; opacity:.65; text-transform:uppercase; font-family:'Roboto Mono',monospace; }
   .topbar h1{ margin:4px 0 0; font-size:22px; font-weight:900; letter-spacing:.02em; }
   .topbar .sub{ margin-top:5px; font-size:12.5px; opacity:.75; }
   .back-btn{
     background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.3);
-    color:#f3f0e8; border-radius:999px; padding:6px 16px; font-size:13px; cursor:pointer; margin-bottom:8px;
+    color:#f2f3f5; border-radius:999px; padding:6px 16px; font-size:13px; cursor:pointer; margin-bottom:8px;
   }
 
   /* 設定月目標彈窗 */
-  #tgOverlay{ display:none; position:fixed; inset:0; background:rgba(22,35,61,.45); z-index:50; align-items:center; justify-content:center; padding:20px; }
+  #tgOverlay{ display:none; position:fixed; inset:0; background:rgba(17,19,22,.45); z-index:50; align-items:center; justify-content:center; padding:20px; }
   #tgModal{ background:#fff; border-radius:18px; padding:26px 24px; width:100%; max-width:360px; text-align:center; box-shadow:0 18px 50px rgba(0,0,0,.25); }
   #tgModal h3{ margin:0 0 6px; font-size:18px; font-weight:900; }
   #tgModal p{ margin:0 0 16px; font-size:12.5px; color:var(--ink-soft); }
-  #tgModal input{ width:100%; padding:13px; font-size:20px; text-align:center; border:1.5px solid var(--line); border-radius:12px; background:#fbfaf6; font-family:'Roboto Mono',monospace; }
+  #tgModal input{ width:100%; padding:13px; font-size:20px; text-align:center; border:1.5px solid var(--line); border-radius:12px; background:#f7f8fa; font-family:'Roboto Mono',monospace; }
   #tgModal .btns{ display:flex; gap:10px; margin-top:16px; }
   #tgModal button{ flex:1; padding:12px; font-size:15px; font-weight:700; border:none; border-radius:12px; cursor:pointer; }
   #tgModal .ok{ background:var(--navy); color:#fff; }
-  #tgModal .cancel{ background:#ece7da; color:var(--ink-soft); }
-  #tgErr{ color:#b5432f; font-size:12.5px; min-height:18px; margin-top:10px; }
+  #tgModal .cancel{ background:#eef0f3; color:var(--ink-soft); }
+  #tgErr{ color:#e11d2a; font-size:12.5px; min-height:18px; margin-top:10px; }
 
   .wrap{ max-width: 1080px; margin: 0 auto; padding: 22px 18px 60px; }
   #loading{ text-align:center; padding: 80px 20px; color:var(--ink-soft); }
@@ -66,7 +68,7 @@
     background: var(--paper-2); border:1.5px solid var(--line); border-radius: 18px;
     padding: 24px 24px 20px; cursor:pointer; transition: transform .12s, box-shadow .12s;
   }
-  .plant-card:hover{ transform: translateY(-2px); box-shadow: 0 8px 22px rgba(22,35,61,.12); }
+  .plant-card:hover{ transform: translateY(-2px); box-shadow: 0 8px 22px rgba(17,19,22,.12); }
   .plant-card .pname{ font-size:20px; font-weight:900; display:flex; justify-content:space-between; align-items:center; }
   .plant-card .pname .arrow{ color:var(--ink-soft); font-size:22px; }
   .plant-card .plabel{ font-size:12px; color:var(--ink-soft); margin-top:16px; }
@@ -74,9 +76,9 @@
   .pg-wrap{ margin-top:14px; }
   .pg-head{ display:flex; justify-content:space-between; font-size:12px; color:var(--ink-soft); margin-bottom:5px; }
   .pg-head b{ color:var(--ink); font-family:'Roboto Mono',monospace; }
-  .pg{ height:12px; border-radius:999px; background:#efe9db; overflow:hidden; }
-  .pg i{ display:block; height:100%; border-radius:999px; background: linear-gradient(90deg, var(--labor), #4d7fc9); }
-  .pg i.done{ background: linear-gradient(90deg, var(--green), #57a37e); }
+  .pg{ height:12px; border-radius:999px; background:#eef0f3; overflow:hidden; }
+  .pg i{ display:block; height:100%; border-radius:999px; background: linear-gradient(90deg, var(--labor), #3d4756); }
+  .pg i.done{ background: linear-gradient(90deg, var(--green), #2fa365); }
   .plant-card .pmeta{ margin-top:12px; font-size:12px; color:var(--ink-soft); display:flex; justify-content:space-between; }
 
   /* ===== 廠內頁 ===== */
@@ -108,7 +110,7 @@
   .dayrate .dayrow .dv{ width: 150px; }
   .dayrow{ display:flex; align-items:center; gap:10px; padding:4px 0; font-size:13px; }
   .dayrow .dt{ width:64px; font-family:'Roboto Mono',monospace; color:var(--ink-soft); flex-shrink:0; }
-  .dayrow .dbar{ flex:1; height:14px; border-radius:4px; background:#efe9db; overflow:hidden; }
+  .dayrow .dbar{ flex:1; height:14px; border-radius:4px; background:#eef0f3; overflow:hidden; }
   .dayrow .dbar i{ display:block; height:100%; border-radius:4px; }
   .dayrow .dv{ width:92px; text-align:right; font-family:'Roboto Mono',monospace; font-weight:700; flex-shrink:0; }
   .dayrow .dv small{ font-weight:400; color:var(--ink-soft); }
@@ -125,7 +127,7 @@
   }
 
   /* 排行列 */
-  .rankrow{ display:flex; align-items:center; gap:10px; padding: 8px 0; border-top: 1px dashed #eae5d8; }
+  .rankrow{ display:flex; align-items:center; gap:10px; padding: 8px 0; border-top: 1px dashed #eef0f3; }
   .rk{ width: 34px; text-align:center; font-family:'Roboto Mono',monospace; font-weight:700; font-size:15px; color:var(--ink-soft); flex-shrink:0; }
   .rk.m1{ font-size:20px; } .rk.m2{ font-size:18px; } .rk.m3{ font-size:17px; }
   .who{ width: 96px; flex-shrink:0; }
@@ -144,12 +146,12 @@
   /* 點開的明細面板 */
   .detail{
     margin: 2px 0 10px 44px; border:1.5px solid var(--line); border-radius: 12px;
-    background: #fbfaf6; padding: 14px 16px; animation: pop .18s ease;
+    background: #f7f8fa; padding: 14px 16px; animation: pop .18s ease;
   }
   @keyframes pop{ from{ opacity:0; transform: translateY(-4px);} to{opacity:1; transform:none;} }
   .detail .dhead{ display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px; }
   .detail .dhead .t{ font-weight:900; font-size:15px; }
-  .detail .close{ border:none; background:#ece7da; border-radius:8px; padding:4px 12px; font-size:12px; cursor:pointer; color:var(--ink-soft); }
+  .detail .close{ border:none; background:#eef0f3; border-radius:8px; padding:4px 12px; font-size:12px; cursor:pointer; color:var(--ink-soft); }
   .chips{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
   .chip{
     border:1.5px solid var(--line); border-radius: 999px; padding: 6px 14px;
@@ -168,7 +170,7 @@
 
   table.items{ width:100%; border-collapse:collapse; font-size:12.5px; margin-top:4px; }
   table.items th{ text-align:left; color:var(--ink-soft); font-weight:500; font-size:11px; padding:4px 6px; border-bottom:1px solid var(--line); }
-  table.items td{ padding:5px 6px; border-bottom:1px dashed #eae5d8; }
+  table.items td{ padding:5px 6px; border-bottom:1px dashed #eef0f3; }
   table.items td.r, table.items th.r{ text-align:right; font-family:'Roboto Mono',monospace; }
   .items-note{ font-size:11px; color:var(--ink-soft); margin-top:8px; }
 

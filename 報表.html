@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>業績報表</title>
+<style>
+:root{
+  --ink:#1d1d1f; --sub:#3d4756; --muted:#86868b; --line:#e5e5ea;
+  --bg:#f2f3f5; --card:#fff; --accent:#e11d2a; --good:#1f8a4c; --warn:#b4690e; --dark:#111316;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  padding-bottom:40px}
+header{background:var(--dark);color:#fff;padding:18px 18px 16px;position:sticky;top:0;z-index:20}
+.eyebrow{font-size:12px;font-weight:800;letter-spacing:.22em;color:var(--accent)}
+h1{margin:6px 0 2px;font-size:22px;font-weight:900;letter-spacing:-.02em}
+.sub{font-size:13px;color:#b9bec6}
+.switch{display:flex;gap:8px;margin-top:14px}
+.switch button{flex:1;padding:9px 0;border:0;border-radius:10px;font-size:15px;font-weight:800;
+  background:#24282e;color:#aeb4bd;font-family:inherit}
+.switch button.on{background:#fff;color:var(--ink)}
+nav{display:flex;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:112px;z-index:19}
+nav button{flex:1;padding:13px 0;border:0;background:none;font-size:15px;font-weight:800;color:var(--muted);
+  font-family:inherit;border-bottom:3px solid transparent}
+nav button.on{color:var(--ink);border-bottom-color:var(--accent)}
+main{padding:14px}
+.card{background:var(--card);border-radius:14px;padding:16px;margin-bottom:12px;
+  box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.card h2{margin:0 0 2px;font-size:17px;font-weight:900}
+.card .cap{font-size:12px;color:var(--muted);margin-bottom:12px}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.kpi{background:#f7f8fa;border-radius:12px;padding:12px 10px}
+.kpi .k{font-size:11px;font-weight:800;color:var(--muted)}
+.kpi .v{font-size:25px;font-weight:900;letter-spacing:-.03em;margin-top:2px;line-height:1.1}
+.kpi .u{font-size:12px;font-weight:800;color:var(--muted);margin-left:2px}
+.kpi .n{font-size:11px;color:var(--sub);margin-top:4px;line-height:1.35}
+.row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}
+.row:last-child{border-bottom:0}
+.row .nm{width:92px;font-weight:800;flex:none}
+/* ⚠️ span 是 inline，height 不會生效 → 長條會整條看不見，一定要 display:block */
+.row .barwrap{display:block;flex:1;height:22px;background:#eef0f3;border-radius:6px;position:relative;overflow:hidden}
+.row .bar{display:block;height:100%;border-radius:6px;background:var(--ink)}
+.row .vl{width:88px;text-align:right;font-weight:800;font-variant-numeric:tabular-nums;flex:none}
+.pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800}
+.up{color:var(--good)} .down{color:var(--accent)}
+.bul{margin:0;padding:0;list-style:none}
+.bul li{display:flex;gap:9px;padding:7px 0;font-size:14px;line-height:1.5;border-bottom:1px dashed var(--line)}
+.bul li:last-child{border-bottom:0}
+.bul .tag{flex:none;width:30px;height:21px;border-radius:6px;font-size:11px;font-weight:900;color:#fff;
+  display:flex;align-items:center;justify-content:center;margin-top:1px}
+.t-good{background:var(--good)} .t-bad{background:var(--accent)} .t-do{background:#2b4a7d}
+.tgt{display:flex;align-items:center;gap:8px;margin-top:4px;font-size:12px;color:var(--muted)}
+.meter{flex:1;height:8px;background:#eef0f3;border-radius:5px;position:relative}
+.meter i{position:absolute;left:0;top:0;height:100%;border-radius:5px}
+.meter u{position:absolute;top:-3px;width:2px;height:14px;background:var(--ink)}
+.loading{padding:50px 0;text-align:center;color:var(--muted);font-size:14px}
+.note{font-size:11px;color:var(--muted);line-height:1.6;padding:4px 2px 0}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-size:11px;color:var(--muted);text-align:right;padding:6px 4px;border-bottom:2px solid var(--ink);font-weight:800}
+th:first-child,td:first-child{text-align:left}
+td{padding:9px 4px;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;white-space:nowrap}
+@media(max-width:420px){table{font-size:12px}th{font-size:10px}.pill{font-size:10px;padding:1px 5px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="eyebrow" id="eyebrow">業績報表</div>
+  <h1 id="title">—</h1>
+  <div class="sub" id="subtitle">載入中…</div>
+  <div class="switch">
+    <button id="b永康" class="on" onclick="setLoc('永康')">永康廠</button>
+    <button id="b歸仁" onclick="setLoc('歸仁')">歸仁廠</button>
+  </div>
+</header>
+<nav>
+  <button id="tw" class="on" onclick="setTab('w')">週</button>
+  <button id="tm" onclick="setTab('m')">月</button>
+  <button id="ty" onclick="setTab('y')">年</button>
+</nav>
+<main id="main"><div class="loading">載入中…</div></main>
+
+<script>
+let LOC='永康', TAB='w', D=null;
+const 萬=n=>Math.round((n||0)/10000);
+const nf=n=>(n||0).toLocaleString();
+const pct=(a,b)=>b?(a/b*100):0;
+const sign=v=>(v>=0?'+':'−')+Math.abs(v).toFixed(1)+'%';
+const chgHtml=(a,b)=>{if(!b)return'<span class="pill">—</span>';const v=(a/b-1)*100;
+  return '<span class="pill '+(v>=0?'up':'down')+'">'+sign(v)+'</span>';};
+
+function setLoc(l){LOC=l;document.getElementById('b永康').className=l==='永康'?'on':'';
+  document.getElementById('b歸仁').className=l==='歸仁'?'on':'';load();}
+function setTab(t){TAB=t;['w','m','y'].forEach(x=>document.getElementById('t'+x).className=x===t?'on':'');
+  if(D)render();}   // 資料還沒回來就先不畫，等 load() 完成會自己 render
+
+async function load(){
+  document.getElementById('main').innerHTML='<div class="loading">載入中…</div>';
+  try{
+    const r=await fetch('/api/report-data?loc='+encodeURIComponent(LOC)+'&_='+Date.now());
+    D=await r.json();
+    if(D.error)throw new Error(D.error);
+    render();
+  }catch(e){
+    document.getElementById('main').innerHTML='<div class="loading">讀取失敗：'+e.message+'</div>';
+  }
+}
+
+function head(){
+  const c=D.月卡[D.本月];
+  document.getElementById('eyebrow').textContent=LOC+'廠・'+D.本月.replace('-','年')+'月';
+  document.getElementById('title').textContent={w:'每週進度',m:'月度報表',y:D.年卡.year+' 年度回顧'}[TAB];
+  document.getElementById('subtitle').textContent=c?('資料截至 '+c.lastDay+'（'+c.elapsedWork+'／'+c.totalWork+' 營業日）'):'尚無資料';
+}
+
+function kpi(k,v,u,n,color){
+  return '<div class="kpi"><div class="k">'+k+'</div><div class="v"'+(color?' style="color:'+color+'"':'')+'>'+v+
+    '<span class="u">'+u+'</span></div><div class="n">'+(n||'')+'</div></div>';
+}
+function meter(a,t,timePct){
+  const p=Math.min(pct(a,t),125), col=p>=100?'var(--good)':(p>=timePct?'var(--ink)':'var(--accent)');
+  return '<div class="tgt"><span>目標</span><div class="meter"><i style="width:'+(p/125*100)+'%;background:'+col+'"></i>'+
+    '<u style="left:'+(100/125*100)+'%"></u></div><b style="color:'+col+'">'+p.toFixed(0)+'%</b></div>';
+}
+function bars(items,fmt){
+  const mx=Math.max(...items.map(i=>i.v),1);
+  return items.map(i=>'<div class="row"><span class="nm">'+i.n+'</span>'+
+    '<span class="barwrap"><span class="bar" style="width:'+Math.max(2,i.v/mx*100)+'%'+
+    (i.hl?';background:var(--accent)':'')+'"></span></span>'+
+    '<span class="vl">'+fmt(i.v)+'</span></div>').join('');
+}
+function analysis(){
+  const a=D.分析;
+  const li=(t,cls,arr)=>arr.map(x=>'<li><span class="tag '+cls+'">'+t+'</span><span>'+x+'</span></li>').join('');
+  return '<div class="card"><h2>優缺項</h2><div class="cap">系統依達成率、同期比、台數與單車產值自動判讀</div>'+
+    '<ul class="bul">'+li('優','t-good',a.優)+li('缺','t-bad',a.缺)+
+    (a.優.length+a.缺.length?'':'<li>資料不足，無法判讀</li>')+'</ul></div>'+
+    '<div class="card"><h2>改善施策</h2><div class="cap">數字推算出來的處方；現場判斷仍以廠主管為準</div>'+
+    '<ul class="bul">'+li('做','t-do',a.施策)+(a.施策.length?'':'<li>目前沒有需要特別處理的項目</li>')+'</ul></div>';
+}
+
+function viewWeek(){
+  const w=D.週卡, c=D.月卡[D.本月];
+  if(!w.length)return '<div class="card">本月尚無資料</div>';
+  const last=w[w.length-1], prev=w.length>1?w[w.length-2]:null;
+  let h='<div class="card"><h2>最近一週</h2><div class="cap">'+last.週+'（截至 '+last.截至+'）</div><div class="kpis">'+
+    kpi('本週業績',萬(last.業績),'萬',prev?('較上週 '+sign((last.業績/prev.業績-1)*100)):'','var(--accent)')+
+    kpi('本週台數',last.台數,'台',prev?('上週 '+prev.台數+' 台'):'')+
+    kpi('月累計',萬(last.累計),'萬',c&&c.target.amt?('目標 '+萬(c.target.amt)+' 萬'):'')+
+    '</div></div>';
+  h+='<div class="card"><h2>本月各週業績</h2><div class="cap">兩份月累計快照相減，不是每日加總</div>'+
+    bars(w.map((x,i)=>({n:x.週.replace(' 當週',''),v:x.業績,hl:i===w.length-1})),v=>萬(v)+' 萬')+'</div>';
+  h+='<div class="card"><h2>各週引電／鈑噴</h2><div class="cap">單位：萬元</div><table><tr><th>週</th><th>引電</th><th>鈑噴</th><th>台數</th></tr>'+
+    w.map(x=>'<tr><td>'+x.週.replace(' 當週','')+'</td><td>'+萬(x.引電)+'</td><td>'+萬(x.鈑噴)+'</td><td>'+x.台數+'</td></tr>').join('')+'</table></div>';
+  return h+analysis();
+}
+
+function viewMonth(){
+  const c=D.月卡[D.本月];
+  if(!c)return '<div class="card">本月尚無資料</div>';
+  const timePct=pct(c.elapsedWork,c.totalWork);
+  let h='<div class="card"><h2>'+D.本月.slice(5)+' 月'+(c.進行中?'（進行中）':'')+'</h2>'+
+    '<div class="cap">資料截至 '+c.lastDay+'</div><div class="kpis">'+
+    kpi('月累計',萬(c.amt),'萬',c.target.amt?('目標 '+萬(c.target.amt)+' 萬'):'')+
+    kpi('進廠台數',nf(c.cars),'台',c.target.cars?('目標 '+nf(c.target.cars)+' 台'):'')+
+    kpi('月底推估',萬(c.projected),'萬',c.target.amt?('達成 '+pct(c.projected,c.target.amt).toFixed(0)+'%'):'',
+        c.target.amt&&pct(c.projected,c.target.amt)>=100?'var(--good)':'var(--accent)')+
+    '</div>'+(c.target.amt?meter(c.amt,c.target.amt,timePct):'')+
+    '<div class="note">時間進度 '+timePct.toFixed(0)+'%（'+c.elapsedWork+'／'+c.totalWork+' 營業日，週日公休）</div></div>';
+
+  h+='<div class="card"><h2>同期比較</h2><div class="cap">跟上月／去年的同一天累計快照比</div><table>'+
+    '<tr><th>項目</th><th>本期</th><th>上月同期</th><th>去年同期</th></tr>'+
+    [['總業績','amt',1],['引電','eng',1],['鈑噴','bp',1],['進廠台數','cars',0]].map(([n,k,isM])=>
+      '<tr><td>'+n+'</td><td><b>'+(isM?萬(c[k])+' 萬':nf(c[k]))+'</b></td>'+
+      '<td>'+(c.lastMonth?(isM?萬(c.lastMonth[k])+' 萬':nf(c.lastMonth[k]))+' '+chgHtml(c[k],c.lastMonth[k]):'—')+'</td>'+
+      '<td>'+(c.lastYear?(isM?萬(c.lastYear[k])+' 萬':nf(c.lastYear[k]))+' '+chgHtml(c[k],c.lastYear[k]):'—')+'</td></tr>').join('')+
+    '</table></div>';
+
+  if(c.target.eng||c.target.bp){
+    h+='<div class="card"><h2>分組進度</h2><div class="cap">黑線＝目標 100%</div>'+
+      [['引電','eng','engCars','carsEng'],['鈑噴','bp','bpCars','carsBp']].filter(g=>c.target[g[3]]||c.target[g[1]]).map(([n,k,ck,tk])=>
+        '<div style="margin:10px 0 14px"><div style="display:flex;justify-content:space-between;font-weight:800">'+
+        '<span>'+n+'</span><span>'+萬(c[k])+' / '+萬(c.target[k])+' 萬</span></div>'+
+        meter(c[k],c.target[k],timePct)+
+        '<div class="note">台數 '+nf(c[ck])+(c.target[tk]?' / 目標 '+nf(c.target[tk]):'')+'</div></div>').join('')+'</div>';
+  }
+  if(c.parts||c.recpParts){
+    const p=c.parts||{tire:0,battery:0,chemical:0};
+    h+='<div class="card"><h2>零件銷售</h2><div class="cap">當月累計（技師視角）</div><div class="kpis">'+
+      kpi('輪胎',nf(p.tire),'條','')+kpi('電瓶',nf(p.battery),'顆','')+kpi('化學品',nf(p.chemical),'件','')+'</div>';
+    if(c.recpParts&&c.recpParts.people.length){
+      h+='<div style="margin-top:14px"><div class="cap">接待每人（同一批工單的接待視角，不可與技師相加）</div><table>'+
+        '<tr><th>接待</th><th>輪胎</th><th>電瓶</th><th>化學品</th></tr>'+
+        c.recpParts.people.map(x=>'<tr><td>'+x.name+'</td><td>'+x.tire+'</td><td>'+x.battery+'</td><td>'+x.chemical+'</td></tr>').join('')+
+        '</table></div>';
+    }
+    h+='</div>';
+  }
+  // 延長保固販售（接待）：只比上月同期，不放去年同期（海哥 2026-10-09 指示）
+  if(c.warranty){
+    const w=c.warranty, lm=c.warrantyLastMonth;
+    h+='<div class="card"><h2>延長保固販售</h2><div class="cap">接待專員・'+w.period+'（只跟上月同期比）</div><div class="kpis">'+
+      kpi('本月件數',w.units,'件',lm?('上月同期 '+lm.units+' 件'):'無上月同期資料')+
+      kpi('銷售金額',萬(w.amt),'萬',lm?('上月同期 '+萬(lm.amt)+' 萬'):'')+
+      kpi('有銷售人數',w.people.filter(p=>p.units>0).length,'人','')+
+      '</div><div style="margin-top:12px"><table><tr><th>接待</th><th>件數</th><th>金額</th>'+(lm?'<th>上月同期</th>':'')+'</tr>'+
+      w.people.map(p=>{const l=lm&&lm.people.find(x=>x.name===p.name);
+        return '<tr><td>'+p.name+'</td><td><b>'+p.units+'</b></td><td>'+nf(p.amt)+'</td>'+
+        (lm?'<td>'+(l?l.units+' 件 '+chgHtml(p.units,l.units):'—')+'</td>':'')+'</tr>';}).join('')+
+      '</table></div></div>';
+  }
+  return h+analysis();
+}
+
+function viewYear(){
+  const y=D.年卡;
+  if(!y.months.length)return '<div class="card">今年尚無資料</div>';
+  // 🔴 海哥 2026-10-09 指示：年卡 12/31 才出（當年度回顧），平常不出半成品
+  const t=D.today, 年底=(t.slice(0,4))+'-12-31';
+  if(t<年底){
+    const done=y.months.filter(m=>!m.進行中);
+    return '<div class="card"><h2>'+y.year+' 年度回顧</h2>'+
+      '<div class="cap">12/31 年度結算後自動產出，現在先不出半成品</div>'+
+      '<ul class="bul"><li><span class="tag t-do">目前</span><span>已結束 '+done.length+' 個月，累計 '+
+      nf(萬(y.累計))+' 萬'+(y.目標累計?('，達成 '+pct(y.累計,y.目標累計).toFixed(1)+'%'):'')+'</span></li>'+
+      '<li><span class="tag t-do">之後</span><span>12/31 當天自動產出完整年度回顧（逐月達成、同期比、全年優缺項）</span></li></ul>'+
+      '<div class="note">想現在看逐月數字，切到「月」分頁即可。</div></div>';
+  }
+  const done=y.months.filter(m=>!m.進行中), cur=y.months.find(m=>m.進行中);
+  let h='<div class="card"><h2>'+y.year+' 年累計</h2><div class="cap">只計已結束的 '+done.length+' 個月</div><div class="kpis">'+
+    kpi('累計業績',nf(萬(y.累計)),'萬',y.目標累計?('目標 '+nf(萬(y.目標累計))+' 萬'):'')+
+    kpi('達成率',y.目標累計?pct(y.累計,y.目標累計).toFixed(1):'—','%','',
+        y.目標累計&&pct(y.累計,y.目標累計)>=100?'var(--good)':'var(--accent)')+
+    kpi('累計台數',nf(y.台數累計),'台',cur?('本月進行中 '+萬(cur.業績)+' 萬'):'')+
+    '</div>'+(y.去年累計?('<div class="note">同期間去年 '+nf(萬(y.去年累計))+' 萬，'+sign((y.累計/y.去年累計-1)*100)+'</div>'):'')+'</div>';
+
+  h+='<div class="card"><h2>逐月業績</h2><div class="cap">＊＝進行中</div>'+
+    bars(y.months.map(m=>({n:m.月+(m.進行中?'＊':''),v:m.業績,hl:m.進行中})),v=>萬(v)+' 萬')+'</div>';
+
+  h+='<div class="card"><h2>逐月達成與同期</h2><table><tr><th>月</th><th>業績</th><th>目標</th><th>達成</th><th>比去年</th></tr>'+
+    y.months.map(m=>{const a=m.目標?pct(m.業績,m.目標):null;
+      return '<tr><td>'+m.月+(m.進行中?'＊':'')+'</td><td>'+萬(m.業績)+'</td><td>'+(m.目標?萬(m.目標):'—')+'</td>'+
+      '<td'+(a!==null?' style="color:'+(a>=100?'var(--good)':'var(--accent)')+';font-weight:800"':'')+'>'+(a!==null?a.toFixed(0)+'%':'—')+'</td>'+
+      '<td>'+(m.去年?chgHtml(m.業績,m.去年):'—')+'</td></tr>';}).join('')+'</table></div>';
+
+  if(y.缺月.length) h+='<div class="card"><div class="note">⚠ 缺少 '+y.缺月.join('、')+' 月的報表，年度累計只含已匯入的月份。補上那幾個月的 205／1G0 報表後，這頁會自動補齊。</div></div>';
+  return h+analysis();
+}
+
+function render(){
+  head();
+  document.getElementById('main').innerHTML={w:viewWeek,m:viewMonth,y:viewYear}[TAB]();
+}
+load();
+</script>
+</body>
+</html>

@@ -57,6 +57,28 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // 🦞 2026-10-09 新增：報表頁（週卡／月卡／年卡＋對比分析＋優缺項＋改善施策）
+  if (u.pathname === '/report') {
+    try {
+      const html = fs.readFileSync(path.join(__dirname, '報表.html'), 'utf8');
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
+    } catch (e) { res.writeHead(404); res.end('找不到頁面'); }
+    return;
+  }
+  if (u.pathname === '/api/report-data') {
+    try {
+      const loc = u.query.loc === '歸仁' ? '歸仁' : '永康';
+      const data = await require('./report-data.js').buildReport(loc);
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify(data));
+    } catch (e) {
+      res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
   if (u.pathname === '/api/tech-login' && req.method === 'POST') {
     let body = '';
     req.on('data', d => body += d);
