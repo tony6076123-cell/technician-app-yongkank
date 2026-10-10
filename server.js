@@ -66,6 +66,28 @@ const server = http.createServer(async (req, res) => {
     } catch (e) { res.writeHead(404); res.end('找不到頁面'); }
     return;
   }
+  // 🦞 2026-10-10 卡片（週/月/年報卡的圖片版）：本機畫好 PNG → 縮圖 base64 存進 report_cards，
+  //    這裡只負責取出來。不帶 img_b64 會很小，前端先列清單再抓單張。
+  if (u.pathname === '/api/cards') {
+    try {
+      const loc = u.query.loc === '歸仁' ? '歸仁' : '永康';
+      const all = await readFirebase('report_cards').catch(() => []);
+      const mine = all.filter(c => c.location === loc);
+      if (u.query.kind) {
+        const one = mine.find(c => c.kind === u.query.kind);
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify(one || { error: '沒有這張卡' }));
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify(mine.map(c => ({ kind: c.kind, period: c.period, file: c.file, updated_at: c.updated_at }))));
+    } catch (e) {
+      res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
   if (u.pathname === '/api/report-data') {
     try {
       const loc = u.query.loc === '歸仁' ? '歸仁' : '永康';

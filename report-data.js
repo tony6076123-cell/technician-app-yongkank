@@ -36,9 +36,24 @@ function snapDays(perf, loc, ym) {
   return [...new Set(perf.filter(p => p.location === loc && p.role === '技師'
     && (p.period_end || '').startsWith(ym)).map(p => p.period_end))].sort();
 }
-// 指定結算日那一份快照的彙總
+// 🔴 2026-10-10 修：原本只取「結算日 === 最後一天」那一批，但不是每個人每天都會出現在報表裡
+//    （有人當天沒工單、或那天的檔漏抓），這些人就整個被漏掉 → 報表頁 360 萬 vs 總覽頁 467 萬。
+//    正解：**每個人各取自己當月最後一份快照**再相加（快照是月累計，跨人相加才正確）。
+function monthSum(perf, loc, ym, untilDay) {
+  const rows = perf.filter(p => p.location === loc && p.role === '技師'
+    && (p.period_end || '').startsWith(ym) && (!untilDay || p.period_end <= untilDay));
+  const byEmp = new Map();
+  rows.forEach(r => { const c = byEmp.get(r.employee); if (!c || r.period_end > c.period_end) byEmp.set(r.employee, r); });
+  const picked = [...byEmp.values()];
+  const day = picked.reduce((a, r) => r.period_end > a ? r.period_end : a, '');
+  return sumRows(picked, day);
+}
+// 指定結算日那一份快照的彙總（週卡用：兩個同一天的快照相減才算得出「當週」）
 function snapSum(perf, loc, day) {
   const rows = perf.filter(p => p.location === loc && p.role === '技師' && p.period_end === day);
+  return sumRows(rows, day);
+}
+function sumRows(rows, day) {
   const s = { day, amt: 0, labor: 0, parts: 0, cars: 0, orders: 0, eng: 0, bp: 0, engCars: 0, bpCars: 0, people: rows.length };
   rows.forEach(r => {
     const amt = r.untaxed_amt || 0, car = r.car_count || 0, g = grpOf(r.dept);
@@ -126,7 +141,7 @@ function monthCard(perf, parts, recp, targets, ew, loc, ym, today) {
   const days = snapDays(perf, loc, ym);
   if (!days.length) return null;
   const last = days[days.length - 1];
-  const s = snapSum(perf, loc, last);
+  const s = monthSum(perf, loc, ym);   // 每人各取自己最後一份快照
   const [y, m] = ym.split('-').map(Number);
   const daysInMonth = new Date(y, m, 0).getDate();
   const elapsedCal = Number(last.slice(8, 10));
@@ -144,9 +159,11 @@ function monthCard(perf, parts, recp, targets, ew, loc, ym, today) {
   // 同期比：上月同一天、去年同一天（都取「≤那天」最近的快照，口徑才一致）
   const sameAt = (ym2) => {
     const d2 = snapDays(perf, loc, ym2).filter(d => Number(d.slice(8, 10)) <= elapsedCal);
-    const pick = 進行中 ? (d2.length ? d2[d2.length - 1] : null)
-                        : (snapDays(perf, loc, ym2).pop() || null);   // 已結束的月份比整月
-    return pick ? snapSum(perf, loc, pick) : null;
+    // 同期：進行中的月份比到「同一天」，已結束的月份比整月；一樣每人取自己最後一份快照
+    const until = 進行中 ? (d2.length ? d2[d2.length - 1] : null) : null;
+    if (進行中 && !until) return null;
+    const r = monthSum(perf, loc, ym2, until);
+    return r.people ? r : null;
   };
   return {
     ym, 進行中, lastDay: last, 快照數: days.length,
@@ -198,10 +215,10 @@ function yearCard(perf, targets, loc, year, today) {
     const ym = `${year}-${String(m).padStart(2, '0')}`;
     const days = snapDays(perf, loc, ym);
     if (!days.length) continue;
-    const s = snapSum(perf, loc, days[days.length - 1]);
+    const s = monthSum(perf, loc, ym);
     const t = targets.find(x => x._id === `${loc}_${ym}`) || {};
     const lyDays = snapDays(perf, loc, shiftYM(ym, -12));
-    const ly = lyDays.length ? snapSum(perf, loc, lyDays[lyDays.length - 1]) : null;
+    const ly = lyDays.length ? monthSum(perf, loc, shiftYM(ym, -12)) : null;
     months.push({ ym, 月: m + '月', 進行中: ym === today.slice(0, 7),
       業績: s.amt, 台數: s.cars, 引電: s.eng, 鈑噴: s.bp,
       目標: t.target_amt || 0, 去年: ly ? ly.amt : null, 截至: days[days.length - 1] });

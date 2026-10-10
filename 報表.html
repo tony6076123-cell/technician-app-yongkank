@@ -82,6 +82,7 @@ td{padding:9px 4px;text-align:right;border-bottom:1px solid var(--line);font-var
   <button id="tw" class="on" onclick="setTab('w')">週</button>
   <button id="tm" onclick="setTab('m')">月</button>
   <button id="ty" onclick="setTab('y')">年</button>
+  <button id="tc" onclick="setTab('c')">卡片</button>
 </nav>
 <main id="main"><div class="loading">載入中…</div></main>
 
@@ -96,8 +97,31 @@ const chgHtml=(a,b)=>{if(!b)return'<span class="pill">—</span>';const v=(a/b-1
 
 function setLoc(l){LOC=l;document.getElementById('b永康').className=l==='永康'?'on':'';
   document.getElementById('b歸仁').className=l==='歸仁'?'on':'';load();}
-function setTab(t){TAB=t;['w','m','y'].forEach(x=>document.getElementById('t'+x).className=x===t?'on':'');
+function setTab(t){TAB=t;['w','m','y','c'].forEach(x=>document.getElementById('t'+x).className=x===t?'on':'');
   if(D)render();}   // 資料還沒回來就先不畫，等 load() 完成會自己 render
+
+// 卡片分頁：顯示本機畫好的週/月/年報卡圖片（存在 Firestore 的縮圖）
+let CARDKIND='週報卡';
+async function showCard(kind){
+  CARDKIND=kind;
+  ['週報卡','月報卡','年報卡'].forEach(k=>{const b=document.getElementById('ck_'+k); if(b)b.className=k===kind?'on':'';});
+  const box=document.getElementById('cardBox');
+  box.innerHTML='<div class="loading">載入圖片中…（第一次約 5 秒）</div>';
+  try{
+    const r=await fetch('/api/cards?loc='+encodeURIComponent(LOC)+'&kind='+encodeURIComponent(kind)+'&_='+Date.now());
+    const c=await r.json();
+    if(!c||!c.img_b64){box.innerHTML='<div class="loading">還沒有這張卡（本機產出後會自動上傳）</div>';return;}
+    box.innerHTML='<div class="cap" style="margin-bottom:8px">'+c.file+'　更新於 '+(c.updated_at||'')+'</div>'+
+      '<img src="data:image/jpeg;base64,'+c.img_b64+'" alt="'+kind+'" style="width:100%;border-radius:10px;display:block">';
+  }catch(e){ box.innerHTML='<div class="loading">讀取失敗：'+e.message+'</div>'; }
+}
+function viewCards(){
+  setTimeout(()=>showCard(CARDKIND),0);
+  return '<div class="card"><h2>報表卡片</h2><div class="cap">跟 LINE 推播、桌面資料夾同一張圖</div>'+
+    '<div class="switch2">'+['週報卡','月報卡','年報卡'].map(k=>
+      '<button id="ck_'+k+'" class="'+(k===CARDKIND?'on':'')+'" onclick="showCard(\''+k+'\')">'+k+'</button>').join('')+
+    '</div><div id="cardBox"><div class="loading">載入圖片中…</div></div></div>';
+}
 
 async function load(){
   document.getElementById('main').innerHTML='<div class="loading">載入中…</div>';
@@ -114,7 +138,7 @@ async function load(){
 function head(){
   const c=D.月卡[D.本月];
   document.getElementById('eyebrow').textContent=LOC+'廠・'+D.本月.replace('-','年')+'月';
-  document.getElementById('title').textContent={w:'每週進度',m:'月度報表',y:D.年卡.year+' 年度回顧'}[TAB];
+  document.getElementById('title').textContent={w:'每週進度',m:'月度報表',y:D.年卡.year+' 年度回顧',c:'報表卡片'}[TAB];
   document.getElementById('subtitle').textContent=c?('資料截至 '+c.lastDay+'（'+c.elapsedWork+'／'+c.totalWork+' 營業日）'):'尚無資料';
 }
 
@@ -267,7 +291,7 @@ function rrTab(isMonth){
 }
 function render(){
   head();
-  document.getElementById('main').innerHTML={w:viewWeek,m:viewMonth,y:viewYear}[TAB]();
+  document.getElementById('main').innerHTML={w:viewWeek,m:viewMonth,y:viewYear,c:viewCards}[TAB]();
 }
 load();
 </script>
