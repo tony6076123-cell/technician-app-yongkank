@@ -66,29 +66,7 @@ const server = http.createServer(async (req, res) => {
     } catch (e) { res.writeHead(404); res.end('找不到頁面'); }
     return;
   }
-  // 🦞 2026-10-10 系統說明影片頁＋靜態媒體（mp4/png 直接放 repo，約 1.3MB，不走資料庫）
-  if (u.pathname === '/video') {
-    try {
-      const html = fs.readFileSync(path.join(__dirname, '影片.html'), 'utf8');
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-      res.end(html);
-    } catch (e) { res.writeHead(404); res.end('找不到頁面'); }
-    return;
-  }
-  if (u.pathname.startsWith('/media/')) {
-    const name = path.basename(u.pathname);          // 只取檔名，擋掉 ../ 跳目錄
-    const file = path.join(__dirname, 'media', name);
-    const type = name.endsWith('.mp4') ? 'video/mp4'
-               : name.endsWith('.png') ? 'image/png'
-               : name.endsWith('.jpg') ? 'image/jpeg' : 'application/octet-stream';
-    try {
-      const buf = fs.readFileSync(file);
-      // 影片／圖片是靜態檔，可以讓瀏覽器快取一天（頁面本身仍是 no-store）
-      res.writeHead(200, { 'Content-Type': type, 'Content-Length': buf.length, 'Cache-Control': 'public, max-age=86400' });
-      res.end(buf);
-    } catch (e) { res.writeHead(404); res.end('找不到檔案'); }
-    return;
-  }
+  // （2026-10-10 海哥決定：系統說明影片不放 App，改放桌面自行轉傳主管，/video 與 /media 已移除）
 
   // 🦞 2026-10-10 卡片（週/月/年報卡的圖片版）：本機畫好 PNG → 縮圖 base64 存進 report_cards，
   //    這裡只負責取出來。不帶 img_b64 會很小，前端先列清單再抓單張。
