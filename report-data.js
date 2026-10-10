@@ -9,6 +9,7 @@
 const { readFirebase } = require('./lib.js');
 
 const REST_DOW = 0;                       // 週日公休
+const APP_START_M = 7;                    // App 上線月份（2026-07）；年度一律從這個月起算
 const isPaint = d => (d || '').includes('噴漆');
 const grpOf = d => (d || '').includes('修護') ? 'eng'
   : ((d || '').includes('鈑金') || isPaint(d)) ? 'bp' : 'other';
@@ -175,8 +176,13 @@ function yearCard(perf, targets, loc, year, today) {
     目標累計: done.reduce((a, x) => a + x.目標, 0),
     台數累計: done.reduce((a, x) => a + x.台數, 0),
     去年累計: done.every(x => x.去年 !== null) ? done.reduce((a, x) => a + x.去年, 0) : null,
-    完整: months.length === 12 && !months.some(x => x.進行中),
-    缺月: [...Array(12).keys()].map(i => i + 1).filter(m => !months.find(x => x.ym.endsWith('-' + String(m).padStart(2, '0')))),
+    // 🔴 海哥 2026-10-10 指示：一律以「App 上線月（2026-07）」為起點，1~6 月暫不補，也不要一直提示缺月。
+    //    只有上線之後才缺的月份才算真的缺（例：之後某個月報表沒進來）。
+    起算月: APP_START_M,
+    完整: months.length === (12 - APP_START_M + 1) && !months.some(x => x.進行中),
+    缺月: [...Array(12).keys()].map(i => i + 1)
+      .filter(m => m >= APP_START_M && m <= Number(today.slice(5, 7))
+        && !months.find(x => x.ym.endsWith('-' + String(m).padStart(2, '0')))),
   };
 }
 
