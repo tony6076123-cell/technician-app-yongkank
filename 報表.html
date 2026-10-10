@@ -14,6 +14,9 @@ body{margin:0;background:var(--bg);color:var(--ink);
   font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
   padding-bottom:40px}
 header{background:var(--dark);color:#fff;padding:18px 18px 16px;position:sticky;top:0;z-index:20}
+/* 回主選單：報表頁原本沒有出口，手機上只能按瀏覽器返回，海哥反映卡住（2026-10-11 補） */
+.back{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:999px;
+  padding:6px 15px;font-size:13px;font-family:inherit;margin-bottom:10px}
 .eyebrow{font-size:12px;font-weight:800;letter-spacing:.22em;color:var(--accent)}
 h1{margin:6px 0 2px;font-size:22px;font-weight:900;letter-spacing:-.02em}
 .sub{font-size:13px;color:#b9bec6}
@@ -70,6 +73,7 @@ td{padding:9px 4px;text-align:right;border-bottom:1px solid var(--line);font-var
 </head>
 <body>
 <header>
+  <button class="back" onclick="location.href='/'">‹ 回主選單</button>
   <div class="eyebrow" id="eyebrow">業績報表</div>
   <h1 id="title">—</h1>
   <div class="sub" id="subtitle">載入中…</div>
