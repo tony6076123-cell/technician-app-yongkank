@@ -84,6 +84,43 @@ function warrantyOf(ew, loc, ym, untilDay) {
   };
 }
 
+// 🦞 接待招攬彙總：每人「本月累計」與「年累計（App 上線月起）」的 延保件數／輪胎／電瓶／化學品。
+//    年累計＝每個月各取該月最後一份快照再相加（快照是月累計，月內不可加，跨月才可加）。
+function recpRollup(recp, ew, loc, ymList) {
+  const blank = () => ({ ew: 0, tire: 0, battery: 0, chemical: 0, tireAmt: 0, batteryAmt: 0, chemicalAmt: 0 });
+  const month = new Map(), year = new Map();
+  const put = (map, name, add) => {
+    if (!map.has(name)) map.set(name, blank());
+    const t = map.get(name);
+    for (const k in add) t[k] += add[k] || 0;
+  };
+  ymList.forEach((ym, i) => {
+    const isLast = i === ymList.length - 1;
+    // 零件：該月每人最後一份快照
+    const rows = recp.filter(r => r.location === loc && (r.period_end || '').startsWith(ym));
+    const byEmp = new Map();
+    rows.forEach(r => { const c = byEmp.get(r.employee); if (!c || r.period_end > c.period_end) byEmp.set(r.employee, r); });
+    [...byEmp.values()].forEach(r => {
+      const add = { tire: r.tire_units || 0, battery: r.battery_units || 0, chemical: r.chemical_units || 0,
+                    tireAmt: r.tire_amt || 0, batteryAmt: r.battery_amt || 0, chemicalAmt: r.chemical_amt || 0 };
+      put(year, r.employee, add);
+      if (isLast) put(month, r.employee, add);
+    });
+    // 延保：同月最後一份（period_start 落在該月的）
+    const ews = ew.filter(r => r.location === loc && (r.period_start || '').startsWith(ym));
+    if (ews.length) {
+      const lastEnd = ews.map(r => r.period_end).sort().pop();
+      ews.filter(r => r.period_end === lastEnd && r.employee !== '（全廠）').forEach(r => {
+        put(year, r.employee, { ew: r.warranty_units || 0 });
+        if (isLast) put(month, r.employee, { ew: r.warranty_units || 0 });
+      });
+    }
+  });
+  const toList = m => [...m.entries()].map(([name, v]) => ({ name, ...v }))
+    .sort((a, b) => b.ew - a.ew || b.tire - a.tire || b.chemical - a.chemical);
+  return { 本月: toList(month), 年累計: toList(year), 起算月: ymList[0], 迄: ymList[ymList.length - 1] };
+}
+
 // 月卡：某廠某月
 function monthCard(perf, parts, recp, targets, ew, loc, ym, today) {
   const days = snapDays(perf, loc, ym);
@@ -277,6 +314,7 @@ async function buildReport(loc) {
     月卡: cards,
     週卡: weekCards(perf, loc, cur ? cur.ym : curYM),
     年卡: yearCard(perf, targets, loc, Number(thisYear), today),
+    接待招攬: recpRollup(recp, ew, loc, monthsThisYear),
     分析: analyse(cur),
   };
 }

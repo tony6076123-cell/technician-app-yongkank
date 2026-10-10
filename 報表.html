@@ -56,6 +56,10 @@ main{padding:14px}
 .meter i{position:absolute;left:0;top:0;height:100%;border-radius:5px}
 .meter u{position:absolute;top:-3px;width:2px;height:14px;background:var(--ink)}
 .loading{padding:50px 0;text-align:center;color:var(--muted);font-size:14px}
+.switch2{display:flex;gap:8px;margin:4px 0 12px}
+.switch2 button{flex:1;padding:8px 0;border:1px solid var(--line);border-radius:9px;background:var(--card);
+  color:var(--muted);font-size:13px;font-weight:800;font-family:inherit}
+.switch2 button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 .note{font-size:11px;color:var(--muted);line-height:1.6;padding:4px 2px 0}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th{font-size:11px;color:var(--muted);text-align:right;padding:6px 4px;border-bottom:2px solid var(--ink);font-weight:800}
@@ -189,13 +193,21 @@ function viewMonth(){
     const p=c.parts||{tire:0,battery:0,chemical:0};
     h+='<div class="card"><h2>零件銷售</h2><div class="cap">當月累計（技師視角）</div><div class="kpis">'+
       kpi('輪胎',nf(p.tire),'條','')+kpi('電瓶',nf(p.battery),'顆','')+kpi('化學品',nf(p.chemical),'件','')+'</div>';
-    if(c.recpParts&&c.recpParts.people.length){
-      h+='<div style="margin-top:14px"><div class="cap">接待每人（同一批工單的接待視角，不可與技師相加）</div><table>'+
-        '<tr><th>接待</th><th>輪胎</th><th>電瓶</th><th>化學品</th></tr>'+
-        c.recpParts.people.map(x=>'<tr><td>'+x.name+'</td><td>'+x.tire+'</td><td>'+x.battery+'</td><td>'+x.chemical+'</td></tr>').join('')+
-        '</table></div>';
-    }
     h+='</div>';
+  }
+  // 接待招攬：每人 延保／輪胎／電瓶／化學品，月累計與年累計（App 上線月起）切換
+  const rr=D.接待招攬;
+  if(rr&&(rr.本月.length||rr.年累計.length)){
+    const tbl=list=>'<table><tr><th>接待</th><th>延保</th><th>輪胎</th><th>電瓶</th><th>化學品</th></tr>'+
+      list.map(p=>'<tr><td>'+p.name+'</td><td><b'+(p.ew?' style="color:var(--accent)"':'')+'>'+p.ew+'</b></td>'+
+      '<td>'+p.tire+'</td><td>'+p.battery+'</td><td>'+p.chemical+'</td></tr>').join('')+
+      (list.length?'<tr><td><b>合計</b></td>'+['ew','tire','battery','chemical'].map(k=>
+        '<td><b>'+list.reduce((a,p)=>a+p[k],0)+'</b></td>').join('')+'</tr>':'')+'</table>';
+    h+='<div class="card"><h2>接待招攬</h2><div class="cap">每人延長保固件數與零件招攬量（接待視角，不可與技師相加）</div>'+
+      '<div class="switch2"><button id="rrM" class="on" onclick="rrTab(1)">本月累計</button>'+
+      '<button id="rrY" onclick="rrTab(0)">年累計（'+rr.起算月.slice(5)+'月起）</button></div>'+
+      '<div id="rrBody">'+tbl(rr.本月)+'</div></div>';
+    window._rr=rr; window._rrTbl=tbl;
   }
   // 延長保固販售（接待）：只比上月同期，不放去年同期（海哥 2026-10-09 指示）
   if(c.warranty){
@@ -248,6 +260,11 @@ function viewYear(){
   return h+analysis();
 }
 
+function rrTab(isMonth){
+  document.getElementById('rrM').className=isMonth?'on':'';
+  document.getElementById('rrY').className=isMonth?'':'on';
+  document.getElementById('rrBody').innerHTML=window._rrTbl(isMonth?window._rr.本月:window._rr.年累計);
+}
 function render(){
   head();
   document.getElementById('main').innerHTML={w:viewWeek,m:viewMonth,y:viewYear}[TAB]();
