@@ -10,9 +10,13 @@
   --bg:#f2f3f5; --card:#fff; --accent:#e11d2a; --good:#1f8a4c; --warn:#b4690e; --dark:#111316;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{margin:0;background:var(--bg);color:var(--ink);
+/* 🔴 2026-10-11 海哥：「電腦的要改，太大」。
+   這頁是手機版面，在筆電上整頁被拉到 1920 寬 —— 標題、分頁鈕、卡片圖全部放大一倍。
+   把版心鎖成手機寬度置中，手機上完全不受影響（螢幕本來就比 520 窄）。 */
+html{background:#e6e8ec}
+body{margin:0 auto;max-width:520px;min-height:100vh;background:var(--bg);color:var(--ink);
   font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
-  padding-bottom:40px}
+  padding-bottom:40px;box-shadow:0 0 0 1px rgba(0,0,0,.06)}
 header{background:var(--dark);color:#fff;padding:18px 18px 16px;position:sticky;top:0;z-index:20}
 /* 回主選單：報表頁原本沒有出口，手機上只能按瀏覽器返回，海哥反映卡住（2026-10-11 補） */
 .back{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:999px;
