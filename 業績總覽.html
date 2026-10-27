@@ -436,9 +436,24 @@ function render(){
   el('rateBoard').innerHTML = rateHTML;
 
   const tech = st.sums.filter(s=>s.role==='技師').sort((a,b)=>b.untaxed_amt-a.untaxed_amt);
-  const adv  = st.sums.filter(s=>s.role==='接待').sort((a,b)=>b.untaxed_amt-a.untaxed_amt);
+  // 🔴 2026-10-27：205「服務專員」視角會把**任何在工單上掛接待欄位的人**都算進來，
+  //    所以劉倍源（交車窗口）、陳美吟（零件組）、葉昶廷（鈑金組）會混進接待排行，
+  //    海哥拿去給老闆看被糾正。排行只放真正的「接待組」，其餘另列一行說明，不讓業績憑空消失。
+  const advAll = st.sums.filter(s=>s.role==='接待').sort((a,b)=>b.untaxed_amt-a.untaxed_amt);
+  const 是接待組 = s => (s.dept||'').includes('接待');
+  const adv   = advAll.filter(是接待組);
+  const advOther = advAll.filter(s=>!是接待組(s));
   renderTechGroups(tech);
   renderBoard('boardAdv', '🤝 接待專員排行', adv);
+  if (advOther.length){
+    const list = advOther.map(s=>`${s.employee}（${s.dept||'未分組'}）$${fmt(s.untaxed_amt)}`).join('、');
+    const box = el('boardAdv');
+    if (box) box.insertAdjacentHTML('beforeend',
+      `<div class="hint" style="margin-top:10px;line-height:1.6">
+         非接待組但工單上掛到接待欄位，不列入排行：${list}
+         <br>（交車窗口、零件組、鈑金組等，業績已計入全廠合計，只是不算接待專員個人成績）
+       </div>`);
+  }
 }
 
 // 🦞 返回鍵：廠內頁→廠區總覽；廠區總覽→App主選單
